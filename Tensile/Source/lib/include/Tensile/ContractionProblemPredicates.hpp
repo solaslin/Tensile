@@ -683,6 +683,41 @@ namespace Tensile
                     return problem.operationIdentifier() == value;
                 }
             };
+
+            
+            struct BufferLoadOffsetLimitCheck : public Predicate_CRTP<BufferLoadOffsetLimitCheck, ContractionProblem>
+            {
+                enum
+                {
+                    HasIndex = false,
+                    HasValue = true
+                };
+                size_t value;
+
+                BufferLoadOffsetLimitCheck() = default;
+                BufferLoadOffsetLimitCheck(size_t value)
+                    : value(value)
+                {
+                }
+
+                static std::string Type()
+                {
+                    return "BufferLoadOffsetLimitCheck";
+                }
+
+                virtual bool operator()(ContractionProblem const& problem) const override
+                {
+                    const uint64_t TWO_POW_32 = 4294967296;
+                    size_t DU_OR_MT0    =  value        & 0b11111111111;
+                    size_t DU_OR_MT1    = (value >> 11) & 0b11111111111;
+                    size_t ShiftPtrPadA = (value >> 22) & 0b1111;
+                    size_t ShiftPtrPadB = (value >> 26);
+
+                    return ( problem.a().strides()[1] + ShiftPtrPadA ) * problem.a().elementBytes() * DU_OR_MT0 < TWO_POW_32 
+                        && ( problem.b().strides()[1] + ShiftPtrPadB ) * problem.a().elementBytes() * DU_OR_MT1 < TWO_POW_32;
+                }
+            };
+            
         } // namespace Contraction
 
         /**

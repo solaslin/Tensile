@@ -75,6 +75,7 @@ namespace Tensile
                     Base::template Pair<Predicates::Contraction::HighPrecisionAccumulateEqual>(),
                     Base::template Pair<Predicates::Contraction::TypesEqual>(),
                     Base::template Pair<Predicates::Contraction::OperationIdentifierEqual>(),
+                    Base::template Pair<Predicates::Contraction::BufferLoadOffsetLimitCheck>(),
                 });
 
                 auto gmap = Generic::GetSubclasses();
@@ -204,6 +205,12 @@ namespace Tensile
         template <typename IO>
         struct MappingTraits<Predicates::Contraction::OperationIdentifierEqual, IO>
             : public AutoMappingTraits<Predicates::Contraction::OperationIdentifierEqual, IO>
+        {
+        };
+
+        template <typename IO>
+        struct MappingTraits<Predicates::Contraction::BufferLoadOffsetLimitCheck, IO>
+            : public AutoMappingTraits<Predicates::Contraction::BufferLoadOffsetLimitCheck, IO>
         {
         };
     } // namespace Serialization
