@@ -693,6 +693,7 @@ namespace Tensile
                     HasValue = true
                 };
                 size_t value;
+                // std::array<int, 4> value;
 
                 BufferLoadOffsetLimitCheck() = default;
                 BufferLoadOffsetLimitCheck(size_t value)
@@ -708,13 +709,53 @@ namespace Tensile
                 virtual bool operator()(ContractionProblem const& problem) const override
                 {
                     const uint64_t TWO_POW_32 = 4294967296;
-                    size_t DU_OR_MT0    =  value        & 0b11111111111;
-                    size_t DU_OR_MT1    = (value >> 11) & 0b11111111111;
-                    size_t ShiftPtrPadA = (value >> 22) & 0b1111;
-                    size_t ShiftPtrPadB = (value >> 26);
 
-                    return ( problem.a().strides()[1] + ShiftPtrPadA ) * problem.a().elementBytes() * DU_OR_MT0 < TWO_POW_32 
-                        && ( problem.b().strides()[1] + ShiftPtrPadB ) * problem.a().elementBytes() * DU_OR_MT1 < TWO_POW_32;
+                    size_t DU_OR_MT0            =  value        & 0b11111111111;
+                    size_t DU_OR_MT1            = (value >> 11) & 0b11111111111;
+                    size_t ShiftPtrPadElementA  = (value >> 22) & 0b1111;
+                    size_t ShiftPtrPadElementB  = (value >> 26);
+
+                    bool shouldPass = ( problem.a().strides()[1] * DU_OR_MT0 + ShiftPtrPadElementA ) * problem.a().elementBytes() < TWO_POW_32 
+                        && ( problem.b().strides()[1] * DU_OR_MT1 + ShiftPtrPadElementB ) * problem.b().elementBytes() < TWO_POW_32;
+
+                    std::cout << (shouldPass ? "\tPassLoadLimitCheck" : "\tFailLoadLimitCheck") << std::endl;
+
+                    return true;
+
+                    //return ( problem.a().strides()[1] * DU_OR_MT0 + ShiftPtrPadElementA ) * problem.a().elementBytes() < TWO_POW_32 
+                        //&& ( problem.b().strides()[1] * DU_OR_MT1 + ShiftPtrPadElementB ) * problem.b().elementBytes() < TWO_POW_32;
+                }
+            };
+
+            struct BufferStoreOffsetLimitCheck : public Predicate_CRTP<BufferStoreOffsetLimitCheck, ContractionProblem>
+            {
+                enum
+                {
+                    HasIndex = false,
+                    HasValue = true
+                };
+                size_t value;
+
+                BufferStoreOffsetLimitCheck() = default;
+                BufferStoreOffsetLimitCheck(size_t value)
+                    : value(value)
+                {
+                }
+
+                static std::string Type()
+                {
+                    return "BufferStoreOffsetLimitCheck";
+                }
+
+                virtual bool operator()(ContractionProblem const& problem) const override
+                {
+                    const uint64_t TWO_POW_32 = 4294967296;
+
+                    bool shouldPass = problem.a().strides()[1] * problem.a().elementBytes() * value < TWO_POW_32;
+                    std::cout << (shouldPass ? "\tPassStoreLimitCheck" : "\tFailStoreLimitCheck") << std::endl;
+
+                    return true;
+                    //return problem.a().strides()[1] * problem.a().elementBytes() * value < TWO_POW_32;
                 }
             };
             

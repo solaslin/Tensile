@@ -303,25 +303,19 @@ class ProblemPredicate(Properties.Predicate):
         if "LdcEqualsLdd" not in state or state["LdcEqualsLdd"] == True:
             rv += [cls("CDStridesEqual")]
 
-        # if 'BufferLoad' in state and state['BufferLoad'] == True:
-        #     TLUA = state['ProblemType']['TLUA']
-        #     TLUB = state['ProblemType']['TLUB']
-        #     encodedValue = ((state['GlobalLoadVectorWidthB'] << 26) if TLUB else 0 ) | \
-        #                    ((state['GlobalLoadVectorWidthA'] << 22) if TLUA else 0 ) | \
-        #                    ((state['DepthU'] if TLUB else state['MacroTileB']) << 11) | \
-        #                    (state['DepthU'] if TLUA else state['MacroTileA'])
-        #     # encodedValue = 0
-        #     # if TLUA == True:
-        #     #     encodedValue |= state['GlobalLoadVectorWidthA'] << 22
-        #     #     encodedValue |= state['DepthU'] 
-        #     # else:
-        #     #     encodedValue |= state['MacroTileA'] 
-        #     # if TLUB == True:
-        #     #     encodedValue |= state['GlobalLoadVectorWidthB'] << 26
-        #     #     encodedValue |= state['DepthU'] << 11
-        #     # else:
-        #     #     encodedValue |= state['MacroTileB'] << 11
-        #     rv += [cls('BufferLoadOffsetLimitCheck', value=encodedValue)]
+        if 'BufferLoad' in state and state['BufferLoad'] == True:
+            TLUA = state['ProblemType']['TLUA']
+            TLUB = state['ProblemType']['TLUB']            
+            MayShiftA = TLUA and state['AssertFree0ElementMultiple'] < state['GlobalLoadVectorWidthA']
+            MayShiftB = TLUB and state['AssertFree1ElementMultiple'] < state['GlobalLoadVectorWidthB']
+            encodedValue = ((state['GlobalLoadVectorWidthB'] << 26) if MayShiftB else 0 ) | \
+                           ((state['GlobalLoadVectorWidthA'] << 22) if MayShiftA else 0 ) | \
+                           ((state['DepthU'] if TLUB else state['MacroTile1']) << 11) | \
+                           (state['DepthU'] if TLUA else state['MacroTile0'])            
+            rv += [cls('BufferLoadOffsetLimitCheck', value=encodedValue)]
+
+        if 'BufferStore' in state and state['BufferStore'] == True:       
+            rv += [cls('BufferStoreOffsetLimitCheck', value=state['MacroTile1'])]            
 
         return rv
 
