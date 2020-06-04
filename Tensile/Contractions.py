@@ -303,7 +303,7 @@ class ProblemPredicate(Properties.Predicate):
         if "LdcEqualsLdd" not in state or state["LdcEqualsLdd"] == True:
             rv += [cls("CDStridesEqual")]
 
-        if 'BufferLoad' in state and state['BufferLoad'] == True:
+        if 'BufferLoad' in state and state['BufferLoad'] == True and (problemType.aType.isSingle() or problemType.aType.isDouble()):
             TLUA = state['ProblemType']['TLUA']
             TLUB = state['ProblemType']['TLUB']            
             MayShiftA = TLUA and state['AssertFree0ElementMultiple'] < state['GlobalLoadVectorWidthA']
@@ -314,7 +314,7 @@ class ProblemPredicate(Properties.Predicate):
                            (state['DepthU'] if TLUA else state['MacroTile0'])            
             rv += [cls('BufferLoadOffsetLimitCheck', value=encodedValue)]
 
-        if 'BufferStore' in state and state['BufferStore'] == True:       
+        if 'BufferStore' in state and state['BufferStore'] == True and (problemType.cType.isSingle() or problemType.aType.isDouble()):       
             rv += [cls('BufferStoreOffsetLimitCheck', value=state['MacroTile1'])]            
 
         return rv

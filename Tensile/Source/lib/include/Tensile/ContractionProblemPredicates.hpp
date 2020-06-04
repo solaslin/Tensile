@@ -693,7 +693,6 @@ namespace Tensile
                     HasValue = true
                 };
                 size_t value;
-                // std::array<int, 4> value;
 
                 BufferLoadOffsetLimitCheck() = default;
                 BufferLoadOffsetLimitCheck(size_t value)
@@ -715,15 +714,13 @@ namespace Tensile
                     size_t ShiftPtrPadElementA  = (value >> 22) & 0b1111;
                     size_t ShiftPtrPadElementB  = (value >> 26);
 
-                    bool shouldPass = ( problem.a().strides()[1] * DU_OR_MT0 + ShiftPtrPadElementA ) * problem.a().elementBytes() < TWO_POW_32 
+                    // bool shouldPass = ( problem.a().strides()[1] * DU_OR_MT0 + ShiftPtrPadElementA ) * problem.a().elementBytes() < TWO_POW_32 
+                    //     && ( problem.b().strides()[1] * DU_OR_MT1 + ShiftPtrPadElementB ) * problem.b().elementBytes() < TWO_POW_32;
+                    // std::cout << (shouldPass ? "\tPassLoadLimitCheck" : "\tFailLoadLimitCheck") << std::endl;
+                    // return true;
+
+                    return ( problem.a().strides()[1] * DU_OR_MT0 + ShiftPtrPadElementA ) * problem.a().elementBytes() < TWO_POW_32 
                         && ( problem.b().strides()[1] * DU_OR_MT1 + ShiftPtrPadElementB ) * problem.b().elementBytes() < TWO_POW_32;
-
-                    std::cout << (shouldPass ? "\tPassLoadLimitCheck" : "\tFailLoadLimitCheck") << std::endl;
-
-                    return true;
-
-                    //return ( problem.a().strides()[1] * DU_OR_MT0 + ShiftPtrPadElementA ) * problem.a().elementBytes() < TWO_POW_32 
-                        //&& ( problem.b().strides()[1] * DU_OR_MT1 + ShiftPtrPadElementB ) * problem.b().elementBytes() < TWO_POW_32;
                 }
             };
 
@@ -751,11 +748,11 @@ namespace Tensile
                 {
                     const uint64_t TWO_POW_32 = 4294967296;
 
-                    bool shouldPass = problem.a().strides()[1] * problem.a().elementBytes() * value < TWO_POW_32;
-                    std::cout << (shouldPass ? "\tPassStoreLimitCheck" : "\tFailStoreLimitCheck") << std::endl;
+                    // bool shouldPass = problem.a().strides()[1] * problem.a().elementBytes() * value < TWO_POW_32;
+                    // std::cout << (shouldPass ? "\tPassStoreLimitCheck" : "\tFailStoreLimitCheck") << std::endl;
+                    // return true;
 
-                    return true;
-                    //return problem.a().strides()[1] * problem.a().elementBytes() * value < TWO_POW_32;
+                    return problem.a().strides()[1] * problem.a().elementBytes() * value < TWO_POW_32;
                 }
             };
             
