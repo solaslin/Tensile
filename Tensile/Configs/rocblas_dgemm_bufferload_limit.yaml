@@ -47,8 +47,8 @@ BenchmarkProblems:
       BenchmarkJoinParameters:
       BenchmarkFinalParameters:
         - ProblemSizes:
-          - Range: [ [33554432], [32], [1], [32] ]  # strideA = 33554432, should fail on DU >= 16 (For tensorA-N) # TODO - check MT32x32x8: PassAssert but FailValidate
-          - Range: [ [16777216], [32], [1], [32] ]  # strideA = 16777216, should fail on DU >= 32 (For tensorA-N) # TODO - check MT32x32x8/MT32x32x16: PassAssert but FailValidate
+          - Range: [ [33554432], [32], [1], [32] ]  # strideA = 33554432, should fail on DU >= 16 (For tensorA-N) # MT32x32x8: PassBufferLoadAssert but FailBufferStoreAssert
+          - Range: [ [16777216], [32], [1], [32] ]  # strideA = 16777216, should fail on DU >= 32 (For tensorA-N) # MT32x32x8/MT32x32x16: PassBufferLoadAssert but FailBufferStoreAssert
           - Range: [ [32], [32], [1], [33554432] ]  # strideB = 33554432, should fail on MT1 >= 16 (For tensorB-N)
           - Range: [ [32], [32], [1], [16777216] ]  # strideB = 16777216, should fail on MT1 >= 32 (For tensorB-N)
 
@@ -91,8 +91,8 @@ BenchmarkProblems:
       BenchmarkJoinParameters:
       BenchmarkFinalParameters:
         - ProblemSizes:
-          - Range: [ [33554432], [32], [1], [32] ]  # strideA = 33554432, should fail on DU >= 16 (For tensorA-N) # TODO - check DU8: PassAssert but FailValidate
-          - Range: [ [16777216], [32], [1], [32] ]  # strideA = 16777216, should fail on DU >= 32 (For tensorA-N) # TODO - check MT16x32x8 / MT16x32x16: PassAssert but FailValidate
+          - Range: [ [33554432], [32], [1], [32] ]  # strideA = 33554432, should fail on DU >= 16 (For tensorA-N) # DU8: PassBufferLoadAssert but FailBufferStoreAssert
+          - Range: [ [16777216], [32], [1], [32] ]  # strideA = 16777216, should fail on DU >= 32 (For tensorA-N) # MT16x32x8 / MT16x32x16: PassBufferLoadAssert but FailBufferStoreAssert
           - Range: [ [32], [33554432], [1], [32] ]  # strideB = 33554432, should fail on DU >= 16 (For tensorB-T)
           - Range: [ [32], [16777216], [1], [32] ]  # strideB = 16777216, should fail on DU >= 32 (For tensorB-T)
 
