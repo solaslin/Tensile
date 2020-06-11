@@ -9126,7 +9126,7 @@ class KernelWriterAssembly(KernelWriter):
     elements    = []
     vectorwidth = 0
 
-    if edge and not kernel["StoreRemapVectorWidth"]:
+    if edge:
       vectorwidth = kernel["StoreVectorWidth"] if kernel["_VectorStore"] else 1
       vectorwidth = min(vectorwidth, self.maxGwvw(kernel), kernel["AssertFree0ElementMultiple"])
     else:
@@ -9176,19 +9176,22 @@ class KernelWriterAssembly(KernelWriter):
     rpv = kernel["ProblemType"]["DataType"].numRegisters() * ss.cfg.gwvw
 
     addr0 = vgpr(self.storeRemapLW)
-    offset =  addrCalc.globalOffset
+    offset =  addrCalc.coordOffset0 * self.bpeCexternal
 
-    # only consider store with vector4
-    # bps==8 is for bf16 and fp16
-    # bps==16 is for fp32
-    if bps==8:
+    if bps==2:
+      kStr += inst("ds_write_b16", addr0, vgpr(sumIdx, rpv*2), \
+                 "offset:%u"%offset, "storeRemap lw")
+    elif bps==4:
+      kStr += inst("ds_write_b32", addr0, vgpr(sumIdx, rpv), \
+                 "offset:%u"%offset, "storeRemap lw")
+    elif bps==8:
       kStr += inst("ds_write_b64", addr0, vgpr(sumIdx, rpv), \
                  "offset:%u"%offset, "storeRemap lw")
     elif bps==16:
       kStr += inst("ds_write_b128", addr0, vgpr(sumIdx, rpv), \
                  "offset:%u"%offset, "storeRemap lw")
     else:
-       assert ("StoreRemap: bad bps! only support vector4 local write")
+       assert ("StoreRemap: bad bps!")
 
     return kStr
 
@@ -9199,6 +9202,11 @@ class KernelWriterAssembly(KernelWriter):
     kStr = ""
 
     kStr += inst("s_waitcnt", "lgkmcnt(0)", "wait for LDS write" )
+
+    #Data exchange between different waves
+    #Make sure LDS writes are finished of all waves
+    if kernel["MIWaveGroup"][0] > 1:
+      kStr += self.indent + self.syncStr + " //wait all lds write finished" + self.endLine
     kStr += "\n"
 
     gwvw = kernel["StoreRemapVectorWidth"]
@@ -9292,6 +9300,11 @@ class KernelWriterAssembly(KernelWriter):
     kStr += "\n"
     self.vgprPool.checkIn(vTmp)
 
+    #Data exchange between different waves
+    #Make sure LDS reads are finished of all waves
+    if kernel["MIWaveGroup"][0] > 1:
+      kStr += self.indent + self.syncStr + " //wait all lds read finished" + self.endLine
+
     return kStr
 
   ##############################################################################
@@ -9314,7 +9327,7 @@ class KernelWriterAssembly(KernelWriter):
     storeRemapLR = self.vgprPool.checkOut(1, "SR local read")
 
     tmpV0 = self.vgprPool.checkOut(5, "tmpV0")
-    tmpV1 = tmpV0+1
+    waveCoord0 = tmpV1 = tmpV0+1
     ldsStride = tmpV0+2
     coord0 = tmpV0+3
     waveCoord1 = tmpV0+4
@@ -9323,7 +9336,7 @@ class KernelWriterAssembly(KernelWriter):
     ldsPad = max(kernel["StoreRemapVectorWidth"],kernel["MIOutputVectorWidth"])
 
     #calculate local write Address: v[vgprLocalWriteAddrC]
-    kStr += vectorStaticDivideAndRemainder(tid1, tid0, "Serial", globalParameters["WavefrontWidth"], \
+    kStr += vectorStaticDivideAndRemainder(tid1, tid0, "Serial", globalParameters["WavefrontWidth"]*kernel["MIWaveGroup"][0], \
       tmpV0, tmpS0)
 
     kStr += inst("v_mul_lo_u32", vgpr(waveCoord1),
@@ -9335,11 +9348,17 @@ class KernelWriterAssembly(KernelWriter):
                     "lds stride = MT0 + PAD")
     kStr += inst("v_mul_lo_u32", vgpr(tmpV0), vgpr(tid1), vgpr(ldsStride), \
                   "lds coord1 offset = Col-id* lds stride")
+
+    kStr += vectorStaticDivideAndRemainder(waveCoord0, tid0, tid0, globalParameters["WavefrontWidth"],tmpV0, tmpS0)
     kStr += inst("v_lshrrev_b32", vgpr(coord0),
-                hex(log2(kernel["MatrixInstM"])), vgpr(tid0), \
-                "tid / matrixInstM")
+                hex(log2(kernel["MatrixInstN"])), vgpr(tid0), \
+                "tid / matrixInstN")
+
     kStr += inst("v_lshlrev_b32", vgpr(coord0), hex(log2(kernel["MIOutputVectorWidth"])), vgpr(coord0), \
                   "lds coord0 offset *= 4 (each thread hold 4 element)")
+
+    kStr += inst("v_mad_u32_u24", vgpr(coord0), kernel["MatrixInstM"]*kernel["MatrixInstBM"], vgpr(waveCoord0), vgpr(coord0), \
+                  "coord0 += waveCoord0 * wave M shape(blockM*MiM)")
 
     kStr += inst("_v_add_lshl_u32", \
       vgpr(storeRemapLW), \
@@ -9352,16 +9371,21 @@ class KernelWriterAssembly(KernelWriter):
     # calculate local read address : v[vgprLocalReadAddrC]
 
     kStr += self.comment1("Store Remap Local Read address")
+
+    kStr += vectorStaticDivideAndRemainder(tid1, tid0, "Serial", globalParameters["WavefrontWidth"], \
+      tmpV0, tmpS0)
+    kStr += inst("v_mul_lo_u32", vgpr(waveCoord1),
+                  hex(kernel["MatrixInstN"]//kernel["MIWaveGroup"][0]), vgpr(tid1), "coord1 offset of LDS for each Wave")
+
     nThreadPerCol = kernel["MacroTile0"] // gwvw
     nColPerLoad = globalParameters["WavefrontWidth"] // nThreadPerCol
     self.storeRemapLrOffset = (kernel["MacroTile0"]+ldsPad) * nColPerLoad
     self.storeRemapNCPL = nColPerLoad
-    kStr += inst("v_lshrrev_b32", vgpr(tid1),\
+
+    kStr += inst("v_lshrrev_b32", vgpr(tmpV1),\
                 hex(log2(nThreadPerCol)), vgpr(tid0), \
                 "tid / nThreadPerCol")
-    kStr += inst("v_add_u32", vgpr(coord1Offset), vgpr(waveCoord1),vgpr(tid1),"coord1 offset in MacroTile")
-    kStr += inst("v_mov_b32", vgpr(ldsStride), hex(kernel["MacroTile0"]+ldsPad), \
-                    "lds stride = MT0 + PAD")
+    kStr += inst("v_add_u32", vgpr(coord1Offset), vgpr(waveCoord1),vgpr(tmpV1),"coord1 offset in MacroTile")
     kStr += inst("v_mul_lo_u32", vgpr(tmpV0), vgpr(coord1Offset), vgpr(ldsStride), \
                   "lds coord1 offset = Col-id* lds stride")
 
@@ -9380,15 +9404,23 @@ class KernelWriterAssembly(KernelWriter):
 
     # calculate global write coord0 and coord1
     kStr += self.comment1("Store Remap global write coord0 and coord1")
-    kStr += vectorStaticDivideAndRemainder(waveCoord1, tmpV1, "Serial", globalParameters["WavefrontWidth"], \
+    kStr += vectorStaticDivideAndRemainder(tid1, tid0, "Serial", globalParameters["WavefrontWidth"]*kernel["MIWaveGroup"][0], \
       tmpV0, tmpS0)
 
-    ColsPerWave = kernel["MatrixInstN"] * kernel["MatrixInstBN"]
+    ColsPerBlockShape = kernel["MatrixInstN"] * kernel["MatrixInstBN"]
+
     kStr += inst("v_mul_lo_u32", vgpr(waveCoord1),
-                  hex(ColsPerWave), vgpr(waveCoord1), "coord1 offset of global memory for each Wave")
+                  hex(ColsPerBlockShape), vgpr(tid1), "coord1 offset of global memory for each Wave")
+
+    kStr += vectorStaticDivideAndRemainder(tid1, tid0, tid0, globalParameters["WavefrontWidth"], \
+      tmpV0, tmpS0)
+    kStr += inst("v_mad_u32_u24", vgpr(waveCoord1), kernel["MatrixInstN"]//kernel["MIWaveGroup"][0], vgpr(tid1), vgpr(waveCoord1), \
+                  "waveCoord1 += waveCoord0 * MiN / WaveGroupM")
+
     kStr += inst("v_lshrrev_b32", vgpr(tmpV1),\
-                hex(log2(nThreadPerCol)), vgpr(tmpV1), \
+                hex(log2(nThreadPerCol)), vgpr(tid0), \
                 "tid / nThreadPerCol")
+
     kStr += inst("v_add_u32", vgpr(coord1Offset), vgpr(waveCoord1),vgpr(tmpV1),"coord1 offset in MacroTile")
 
     kStr += inst("s_mul_i32", \
@@ -9603,7 +9635,6 @@ class KernelWriterAssembly(KernelWriter):
           self.optSrdIncForRow = 1
 
       if kernel["StoreRemapVectorWidth"]:
-        self.optSingleColVgpr = 1
         self.optSrdIncForRow = 1
 
       if kernel["ProblemType"]["UseInitialStridesCD"]:
@@ -9866,17 +9897,6 @@ class KernelWriterAssembly(KernelWriter):
           % (d1,vc1,d0,vc0))
       if ss.optSingleColVgpr:
         self.coord0Vgpr = kw.coord0
-        # StoreRemap: even in SignalColVgpr, increasing coord1 is neccesary for shiftPtr correction
-        if kernel["StoreRemapVectorWidth"] and edge and self.newCoord1 and self.rowInc:
-          if self.rowInc <= 64:
-            kStr += inst("_v_add_co_u32", vgpr(self.coord1Vgpr), "vcc", \
-                      vgpr(self.kernelWriter.coord1), self.rowInc, \
-                      "coord1.1: coord1Vgpr += d1*sg1*VW + vc1")
-          else:
-            kStr += inst("s_mov_b32", sgpr(tmpS01), self.rowInc, "rowInc d1=%u vc1=%u"%(d0, vc0))
-            kStr += inst("_v_add_co_u32", vgpr(self.coord1Vgpr), "vcc", \
-                      vgpr(self.kernelWriter.coord1), sgpr(tmpS01), \
-                      "coord1.2: coord1 += d1*sg1*VW + vc1")
       elif not ss.optSharedColVgpr or (d1 == vc1 == 0):
         # not share mode or first row always does the address calc math:
 
@@ -10130,7 +10150,7 @@ class KernelWriterAssembly(KernelWriter):
 
       # Now do the edge check and compute the address in bytes:
       if kernel["BufferStore"]:
-        if edge and not kernel["StoreRemapVectorWidth"]:
+        if edge and (not kernel["StoreRemapVectorWidth"] or (kernel["StoreRemapVectorWidth"] and beta)):
           # Set address to -1 if OOB on either dimension
           # and only check the x/coord0 index here, save a couple inst
           sizeBoundary = [0,0]
@@ -10430,7 +10450,11 @@ class KernelWriterAssembly(KernelWriter):
       for edge in edges:
         kStr += "%s:%s"%(writeLabels[beta][edge], self.endLine)
 
-        edgeI = edge
+        # for storeRemap edge case, non-beta still can enable vector stores
+        if kernel["StoreRemapVectorWidth"] and not beta:
+          edgeI = False
+        else:
+          edgeI = edge
         #edgeI = True  # set to True to disable vector stores
         gwvw = vectorWidths[edgeI]
         #print "globalWriteElements: edge=", edge, "beta=", beta, "atomic=", atomic
