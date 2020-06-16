@@ -3,7 +3,7 @@ GlobalParameters:
   NumElementsToValidate: 0
   ValidationMaxToPrint: 16
   PinClocks: False
-  SleepPercent: 200
+  SleepPercent: 200 # (for tunning) when validating, can be 0
   # DataInitTypeA: 0
   # DataInitTypeB: 0
   EnqueuesPerSync: 1
@@ -16,10 +16,17 @@ GlobalParameters:
 BenchmarkProblems:
   -
     - # ProblemType
-      OperationType: ConvolutionBackwardData
-      DataType: B
-      DestDataType: B
-      ComputeDataType: s
+      # OperationType: GEMM
+      # DataType: h
+      # # DestDataType: B
+      # # ComputeDataType: s
+      # HighPrecisionAccumulate: True
+      # TransposeA: False
+      # TransposeB: False
+      # UseBeta: False
+      # Batched: True
+      OperationType: ConvolutionForward
+      DataType: h
       HighPrecisionAccumulate: True
       ConvolutionConfig:
       - Dilation: 1x1
@@ -34,10 +41,10 @@ BenchmarkProblems:
         - EdgeType: ["ShiftPtr"]
       ForkParameters:
         - MatrixInstruction:
-          - [32, 32, 2, 2]
-          - [32, 32, 4, 1]
-          - [16, 16, 2, 4]
-          - [16, 16, 8, 1]
+          - [32, 32, 4, 2]
+          - [32, 32, 8, 1]
+          - [16, 16, 4, 4]
+          - [16, 16, 16, 1]
         - ThreadTile:
           - [ 1, 16 ]
           - [ 2, 16 ]
@@ -65,11 +72,11 @@ BenchmarkProblems:
         - LdsBlockSizePerPad: [128]
         - LdsPadA: [-1]
         - LdsPadB: [-1]
-        - StoreRemapVectorWidth: [0,4,8]
+        - StoreRemapVectorWidth: [0,4]
         # - WaveSeparateGlobalReadA: [0,1]
         # - WaveSeparateGlobalReadB: [0,1]
         - StaggerUMapping: [0]
-        - WorkGroupMapping: [1,4,10]
+        - WorkGroupMapping: [1,10,120]
         - PackBatchDims: [0,1]
         - FractionalLoad: [1]
         - AssertFree0ElementMultiple: [1,4,8]
@@ -143,6 +150,38 @@ BenchmarkProblems:
           # odd M
           - Conv: { n: 32, c: 512, h: 7, w: 7, k: 2048, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
           - Conv: { n: 32, c: 2048, h: 7, w: 7, k: 512, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+
+# resnext:
+          - Conv: { n: 64, c: 64, h: 56, w: 56, k: 128, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 64, c: 64, h: 56, w: 56, k: 256, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 64, c: 128, h: 56, w: 56, k: 256, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 64, c: 256, h: 28, w: 28, k: 512, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 64, c: 256, h: 56, w: 56, k: 128, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 64, c: 256, h: 56, w: 56, k: 256, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 64, c: 512, h: 14, w: 14, k: 1024, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 64, c: 512, h: 28, w: 28, k: 256, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 64, c: 512, h: 28, w: 28, k: 512, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }          
+          - Conv: { n: 64, c: 1024, h: 14, w: 14, k: 512, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 64, c: 1024, h: 14, w: 14, k: 1024, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          # odd M
+          - Conv: { n: 64, c: 1024, h: 7, w: 7, k: 2048, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 64, c: 2048, h: 7, w: 7, k: 1024, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+
+          # batch 32
+          - Conv: { n: 32, c: 64, h: 56, w: 56, k: 128, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 32, c: 64, h: 56, w: 56, k: 256, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 32, c: 128, h: 56, w: 56, k: 256, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 32, c: 256, h: 28, w: 28, k: 512, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 32, c: 256, h: 56, w: 56, k: 128, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 32, c: 256, h: 56, w: 56, k: 256, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 32, c: 512, h: 14, w: 14, k: 1024, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 32, c: 512, h: 28, w: 28, k: 256, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 32, c: 512, h: 28, w: 28, k: 512, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }          
+          - Conv: { n: 32, c: 1024, h: 14, w: 14, k: 512, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 32, c: 1024, h: 14, w: 14, k: 1024, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          # odd M
+          - Conv: { n: 32, c: 1024, h: 7, w: 7, k: 2048, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          - Conv: { n: 32, c: 2048, h: 7, w: 7, k: 1024, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }            
 #     -
 #       InitialSolutionParameters:
 #       BenchmarkCommonParameters:
@@ -150,10 +189,10 @@ BenchmarkProblems:
 #         - EdgeType: ["ShiftPtr"]
 #       ForkParameters:
 #         - MatrixInstruction:
-#           - [32, 32, 2, 2]
-#           - [32, 32, 4, 1]
-#           - [16, 16, 2, 4]
-#           - [16, 16, 8, 1]
+#           - [32, 32, 4, 2]
+#           - [32, 32, 8, 1]
+#           - [16, 16, 4, 4]
+#           - [16, 16, 16, 1]
 #         - ThreadTile:
 #           - [ 1, 16 ]
 #           - [ 2, 16 ]
@@ -185,8 +224,8 @@ BenchmarkProblems:
 #         # - WaveSeparateGlobalReadA: [0,1]
 #         # - WaveSeparateGlobalReadB: [0,1]
 #         - StaggerUMapping: [0]
-#         - WorkGroupMapping: [1,4,10]
-#         # - PackBatchDims: [0,1]  # 1 doesn't work
+#         - WorkGroupMapping: [1,10,120]
+#         # - PackBatchDims: [0]  # 1 doesn't work
 #         - FractionalLoad: [1]
 #         - AssertFree0ElementMultiple: [1]
 #       BenchmarkForkParameters:
@@ -217,7 +256,7 @@ BenchmarkProblems:
 #           - Conv: { n: 32, c: 768, h: 17, w: 17, k: 128, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
 #           - Conv: { n: 32, c: 768, h: 17, w: 17, k: 160, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
 #           - Conv: { n: 32, c: 768, h: 17, w: 17, k: 192, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-# # resnet50
+# # resnet50           
 #           - Conv: { n: 64, c: 512, h: 7, w: 7, k: 2048, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
 #           - Conv: { n: 64, c: 2048, h: 7, w: 7, k: 512, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
 
