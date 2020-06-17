@@ -3,9 +3,7 @@ GlobalParameters:
   NumElementsToValidate: 0
   ValidationMaxToPrint: 16
   PinClocks: False
-  SleepPercent: 200 # (for tunning) when validating, can be 0
-  # DataInitTypeA: 0
-  # DataInitTypeB: 0
+  # SleepPercent: 0
   EnqueuesPerSync: 1
   KernelTime: True
   NewClient: 2
@@ -16,15 +14,6 @@ GlobalParameters:
 BenchmarkProblems:
   -
     - # ProblemType
-      # OperationType: GEMM
-      # DataType: h
-      # # DestDataType: B
-      # # ComputeDataType: s
-      # HighPrecisionAccumulate: True
-      # TransposeA: False
-      # TransposeB: False
-      # UseBeta: False
-      # Batched: True
       OperationType: ConvolutionForward
       DataType: h
       HighPrecisionAccumulate: True
@@ -182,90 +171,10 @@ BenchmarkProblems:
           # odd M
           - Conv: { n: 32, c: 1024, h: 7, w: 7, k: 2048, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
           - Conv: { n: 32, c: 2048, h: 7, w: 7, k: 1024, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }            
-#     -
-#       InitialSolutionParameters:
-#       BenchmarkCommonParameters:
-#         - KernelLanguage: ["Assembly"]
-#         - EdgeType: ["ShiftPtr"]
-#       ForkParameters:
-#         - MatrixInstruction:
-#           - [32, 32, 4, 2]
-#           - [32, 32, 8, 1]
-#           - [16, 16, 4, 4]
-#           - [16, 16, 16, 1]
-#         - ThreadTile:
-#           - [ 1, 16 ]
-#           - [ 2, 16 ]
-#           - [ 1, 32 ]
-#           - [ 2, 32 ]
-#           - [ 2, 64 ]
-#         - WorkGroup:
-#           - [ 128, 2, 1 ]
-#           - [ 64, 4, 1 ]
-#           - [ 32, 8, 1 ]
-#           - [ 16, 16, 1 ]
-#         - PrefetchGlobalRead: [1]
-#         - PrefetchLocalRead: [1]
-#         - DepthU: [32,64]
-#         - VectorWidth: [2]
-#         - GlobalReadVectorWidth: [2,4,8]
-#         - SuppressNoLoadLoop: [0]
-#         - OptNoLoadLoop: [1]
-#         - ScheduleLocalWrite: [1]
-#         - ScheduleGlobalRead: [1]
-#         - ScheduleIterAlg: [3]
-#         - InnerUnroll: [1]
-#         - ExpandPointerSwap: [1]
-#         - TransposeLDS: [1]
-#         - LdsBlockSizePerPad: [128]
-#         - LdsPadA: [-1]
-#         - LdsPadB: [-1]
-#         - StoreRemapVectorWidth: [0,4,8]
-#         # - WaveSeparateGlobalReadA: [0,1]
-#         # - WaveSeparateGlobalReadB: [0,1]
-#         - StaggerUMapping: [0]
-#         - WorkGroupMapping: [1,10,120]
-#         # - PackBatchDims: [0]  # 1 doesn't work
-#         - FractionalLoad: [1]
-#         - AssertFree0ElementMultiple: [1]
-#       BenchmarkForkParameters:
-#       BenchmarkJoinParameters:
-#       BenchmarkFinalParameters:
-#         - ProblemSizes:
-# # inception 1x1 convs:
-#           - Conv: { n: 64, c: 192, h: 35, w: 35, k: 32, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 64, c: 192, h: 35, w: 35, k: 48, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 64, c: 192, h: 35, w: 35, k: 64, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 64, c: 256, h: 35, w: 35, k: 48, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 64, c: 256, h: 35, w: 35, k: 64, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 64, c: 288, h: 35, w: 35, k: 48, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 64, c: 288, h: 35, w: 35, k: 64, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 64, c: 64, h: 73, w: 73, k: 80, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 64, c: 768, h: 17, w: 17, k: 128, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 64, c: 768, h: 17, w: 17, k: 160, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 64, c: 768, h: 17, w: 17, k: 192, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
 
-#           - Conv: { n: 32, c: 192, h: 35, w: 35, k: 32, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 32, c: 192, h: 35, w: 35, k: 48, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 32, c: 192, h: 35, w: 35, k: 64, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 32, c: 256, h: 35, w: 35, k: 48, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 32, c: 256, h: 35, w: 35, k: 64, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 32, c: 288, h: 35, w: 35, k: 48, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 32, c: 288, h: 35, w: 35, k: 64, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 32, c: 64, h: 73, w: 73, k: 80, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 32, c: 768, h: 17, w: 17, k: 128, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 32, c: 768, h: 17, w: 17, k: 160, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 32, c: 768, h: 17, w: 17, k: 192, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-# # resnet50           
-#           - Conv: { n: 64, c: 512, h: 7, w: 7, k: 2048, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 64, c: 2048, h: 7, w: 7, k: 512, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+LibraryLogic:
+  ScheduleName: "arcturus"
+  DeviceNames: ["Device 7380", "Device 7388", "Device 738c", "Device 7390"]
+  ArchitectureName: "gfx908"
 
-#           - Conv: { n: 32, c: 512, h: 7, w: 7, k: 2048, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-#           - Conv: { n: 32, c: 2048, h: 7, w: 7, k: 512, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
-
-# LibraryLogic:
-#   ScheduleName: "arcturus"
-#   DeviceNames: ["Device 7380", "Device 7388", "Device 738c", "Device 7390"]
-#   ArchitectureName: "gfx908"
-
-# LibraryClient:
+LibraryClient:
