@@ -1224,12 +1224,10 @@ class KernelWriter(metaclass=abc.ABCMeta):
             waitLocalWrite = 1
           else:
             waitLocalWrite = -1
-          waitLocalRead  = 1 if isResetLroIter else 0
 
         else: # not isResetLroIter
           waitGlobalRead = 1 if u==0 and kernel["PrefetchGlobalRead"] and kernel["PrefetchLocalRead"] else -1
           waitLocalWrite = -1
-          waitLocalRead  = 1 if kernel["PrefetchLocalRead"] else 0
 
         if self.enable["Wait"]:
           dataAtIter = u//self.numIterPerCoalescedRead - kernel["PrefetchLocalRead"]%kernel["LoopIters"]
@@ -1285,7 +1283,6 @@ class KernelWriter(metaclass=abc.ABCMeta):
           numVectorsPerTileB = (kernel["ThreadTile%u"%tensorParametersB["tensorIdx"]]/kernel["VectorWidth"])
           TotalnumLdsFetches = numVectorsPerTileA*numReadsPerVectorA + numVectorsPerTileB*numReadsPerVectorA
           waitLocalWrite = -1
-          waitLocalRead  = 0
           ## Rules for applying kernel["UnrollLoopEfficiencyEnable"]
           ## if A+B fetches <= 3 no split approach
           if not TotalnumLdsFetches > 3:
