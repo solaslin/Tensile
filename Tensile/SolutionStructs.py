@@ -2080,6 +2080,8 @@ class Solution:
         reject(state, "MatrixInstruction %s not valid for DataType %s" % (state["MatrixInstruction"], state["ProblemType"]["DataType"]))
       if (state["ThreadTile"][1] % state["MatrixInstruction"][0]) != 0:
         reject(state, "invalide ThreadTile1 %u for MatrixInstM %u" % (state["ThreadTile"][1], state["MatrixInstruction"][0]))
+      if (state["WorkGroup"][0] % state["MatrixInstruction"][0]) != 0:
+        reject(state, "invalide WorkGroup0 %u for MatrixInstM %u" % (state["WorkGroup"][0], state["MatrixInstruction"][0]))
 
       # set EnableMatrixInstruction
       state["EnableMatrixInstruction"] = True
@@ -2324,6 +2326,7 @@ class Solution:
     state["_staggerStrideShift"] = staggerStrideShift
     if state["StaggerU"] == 0:
       state["StaggerUMapping"] = 0
+      state["StaggerUStride"] = 256
 
     # VectorWidth default handling
     if state["VectorWidth"] < 1:
