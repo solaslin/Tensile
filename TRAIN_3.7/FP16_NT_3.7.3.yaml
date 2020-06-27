@@ -1,0 +1,354 @@
+GlobalParameters:
+  MinimumRequiredVersion: 4.14.0
+  PrintLevel: 1
+  ForceRedoBenchmarkProblems: True
+  ForceRedoLibraryLogic: True
+  ForceRedoLibraryClient: True
+  CMakeBuildType: Release
+  EnqueuesPerSync: 1
+  SyncsPerBenchmark: 1
+  LibraryPrintDebug: False
+  NumElementsToValidate: 0
+  NumBenchmarks: 1
+  ValidationMaxToPrint: 4
+  ValidationPrintValids: False
+  ShortNames: False
+  # MergeFiles: False
+  Platform: 0
+  Device: 0
+  KernelTime: True
+  PinClocks: False
+  SleepPercent: 200
+  # PrintSolutionRejectionReason: True
+  PrintWinnersOnly: True
+  # ForceGenerateKernel: True
+  DataInitTypeA: 3
+  DataInitTypeB: 3
+  # DataInitTypeC: 3
+  # DataInitTypeD: 3
+  DataInitTypeBeta: 0
+  DataInitTypeAlpha: 1
+  PrintTensorA: 0
+  PrintTensorB: 0
+  PrintTensorD: 0
+  NewClient: 2
+
+BenchmarkProblems:
+  ########################################
+  # TN - standard
+  ########################################
+  -
+    - # ProblemType
+      OperationType: GEMM
+      DataType: h
+      # DestDataType: B
+      # ComputeDataType: s
+      HighPrecisionAccumulate: True
+      TransposeA: False
+      TransposeB: True
+      UseBeta: True
+      Batched: True
+    - # BenchmarkProblemSizeGroup - Standard
+      InitialSolutionParameters:
+      BenchmarkCommonParameters:
+        - KernelLanguage: ["Assembly"]
+        - EdgeType: ["ShiftPtr"]
+      ForkParameters:
+        - MatrixInstruction:
+          - [32, 32, 4, 2,  2,  1,1,  1]
+          - [32, 32, 4, 2,  2,  1,1,  2]
+          - [32, 32, 4, 2,  2,  2,1,  1]
+          - [32, 32, 4, 2,  2,  2,2,  1]
+          - [32, 32, 4, 2,  2,  2,2,  2]
+          - [32, 32, 8, 1,  1,  1,1,  2]
+          - [32, 32, 8, 1,  1,  1,2,  2]
+          - [32, 32, 8, 1,  1,  2,1,  2]
+          - [32, 32, 8, 1,  1,  2,2,  2]
+          - [32, 32, 8, 1,  1,  2,4,  2]
+          - [32, 32, 8, 1,  1,  4,2,  2]
+          - [16, 16, 16, 1,  1,  1,1,  2]
+          - [16, 16, 16, 1,  1,  1,2,  2]
+          - [16, 16, 16, 1,  1,  2,1,  2]
+        - ThreadTile:
+          - [ 1, 32 ]
+        - WorkGroup:
+          - [ 64, 4, 1 ]
+        - AssertSummationElementMultiple: [1]
+        - AssertFree0ElementMultiple: [1]
+        - AssertFree1ElementMultiple: [1]
+        - PrefetchGlobalRead: [1]
+        - PrefetchLocalRead: [1]
+        - DepthU: [8,16,32,64,128]
+        - VectorWidth: [2]
+        - GlobalReadVectorWidth: [2,4,8]
+        # - LocalReadVectorWidth: [8]
+        - SuppressNoLoadLoop: [0]
+        - OptNoLoadLoop: [1]
+        - ScheduleLocalWrite: [1]
+        - ScheduleGlobalRead: [1]
+        - ScheduleIterAlg: [3]
+        - InnerUnroll: [1]
+        - ExpandPointerSwap: [1]
+        # - TransposeLDS: [1]
+        # - LdsBlockSizePerPad: [-1]
+        # - LdsPadA: [-1]
+        # - LdsPadB: [-1]
+        - StoreRemapVectorWidth: [4]
+        - StaggerUMapping: [0,3]
+        - StaggerUStride: [128,256]
+        - StaggerU: [0,16,32]
+        - WorkGroupMapping: [1,2,15]
+        - WaveSeparateGlobalReadA: [1]
+        - WaveSeparateGlobalReadB: [1]
+        # - 1LDSBuffer: [-1]
+      BenchmarkJoinParameters:
+      BenchmarkFinalParameters:
+        - ProblemSizes:
+          - Exact: [7680, 8192, 1, 8192, 8384, 8384, 8384, 8384]
+          - Exact: [3840, 4096, 1, 4096, 4288, 4288, 4288, 4288]
+          - Exact: [1920, 2048, 1, 2048, 2240, 2240, 2240, 2240]
+          - Exact: [960, 1024, 1, 1024, 1056, 1056, 1056, 1056]
+          - Exact: [480, 512, 1, 512, 544, 544, 544, 544]
+          - Exact: [8192, 7680, 1, 8192, 8384, 8384, 8384, 8384]
+          - Exact: [4096, 3840, 1, 4096, 4288, 4288, 4288, 4288]
+          - Exact: [2048, 1920, 1, 2048, 2240, 2240, 2240, 2240]
+          - Exact: [1024, 960, 1, 1024, 1056, 1056, 1056, 1056]
+          - Exact: [512, 480, 1, 512, 544, 544, 544, 544]
+          - Exact: [8192, 8192, 1, 8192, 8384, 8384, 8384, 8384]
+          - Exact: [4096, 4096, 1, 4096, 4288, 4288, 4288, 4288]
+          - Exact: [2048, 2048, 1, 2048, 2240, 2240, 2240, 2240]
+          - Exact: [1024, 1024, 1, 1024, 1056, 1056, 1056, 1056]
+          - Exact: [512, 512, 1, 512, 544, 544, 544, 544]
+          - Exact: {sizes: [64, 512, 16, 512], stridesA: [-1, 64, 32768], stridesB: [-1, 512, 262144], stridesC: [-1, 64, 32768], stridesD: [-1, 64, 32768] }
+          - Exact: [1024, 2, 1, 1]
+          - Exact: [1024, 2, 1, 512]
+          - Exact: [1024, 1024, 1, 1]
+          - Exact: [1024, 1024, 1, 77]
+          - Exact: [1024, 1024, 1, 512]
+          - Exact: [1024, 4096, 1, 512]
+          - Exact: [1024, 30522, 1, 77]
+          - Exact: [4096, 1024, 1, 512]
+          - Exact: {sizes: [64, 128, 160, 128], stridesA: [-1, 64, 8192], stridesB: [-1, 128, 16384], stridesC: [-1, 64, 8192], stridesD: [-1, 64, 8192] }
+          - Exact: [1024, 2, 1, 10]
+          - Exact: [1024, 2, 1, 1280]
+          - Exact: [1024, 1024, 1, 10]
+          - Exact: [1024, 1024, 1, 200]
+          - Exact: [1024, 1024, 1, 1280]
+          - Exact: [1024, 4096, 1, 1280]
+          - Exact: [1024, 30522, 1, 200]
+          - Exact: [4096, 1024, 1, 1280]
+          - Exact: {sizes: [64, 128, 624, 128], stridesA: [-1, 64, 8192], stridesB: [-1, 128, 16384], stridesC: [-1, 64, 8192], stridesD: [-1, 64, 8192] }
+          - Exact: [1024, 2, 1, 39]
+          - Exact: [1024, 2, 1, 4992]
+          - Exact: [1024, 1024, 1, 39]
+          - Exact: [1024, 1024, 1, 780]
+          - Exact: [1024, 1024, 1, 4992]
+          - Exact: [1024, 4096, 1, 4992]
+          - Exact: [1024, 30522, 1, 780]
+          - Exact: [4096, 1024, 1, 4992]
+          - Exact: {sizes: [64, 512, 64, 512], stridesA: [-1, 64, 32768], stridesB: [-1, 512, 262144], stridesC: [-1, 64, 32768], stridesD: [-1, 64, 32768] }
+          - Exact: [1024, 2, 1, 4]
+          - Exact: [1024, 2, 1, 2048]
+          - Exact: [1024, 1024, 1, 4]
+          - Exact: [1024, 1024, 1, 308]
+          - Exact: [1024, 1024, 1, 2048]
+          - Exact: [1024, 4096, 1, 2048]
+          - Exact: [1024, 30522, 1, 308]
+          - Exact: [4096, 1024, 1, 2048]
+          - Exact: {sizes: [64, 128, 640, 128], stridesA: [-1, 64, 8192], stridesB: [-1, 128, 16384], stridesC: [-1, 64, 8192], stridesD: [-1, 64, 8192] }
+          - Exact: [1024, 2, 1, 40]
+          - Exact: [1024, 2, 1, 5120]
+          - Exact: [1024, 1024, 1, 40]
+          - Exact: [1024, 1024, 1, 800]
+          - Exact: [1024, 1024, 1, 5120]
+          - Exact: [1024, 4096, 1, 5120]
+          - Exact: [1024, 30522, 1, 800]
+          - Exact: [4096, 1024, 1, 5120]
+          - Exact: {sizes: [64, 128, 656, 128], stridesA: [-1, 64, 8192], stridesB: [-1, 128, 16384], stridesC: [-1, 64, 8192], stridesD: [-1, 64, 8192] }
+          - Exact: [1024, 2, 1, 41]
+          - Exact: [1024, 2, 1, 5248]
+          - Exact: [1024, 1024, 1, 41]
+          - Exact: [1024, 1024, 1, 820]
+          - Exact: [1024, 1024, 1, 5248]
+          - Exact: [1024, 4096, 1, 5248]
+          - Exact: [1024, 30522, 1, 820]
+          - Exact: [4096, 1024, 1, 5248]
+          - Exact: {sizes: [64, 512, 80, 512], stridesA: [-1, 64, 32768], stridesB: [-1, 512, 262144], stridesC: [-1, 64, 32768], stridesD: [-1, 64, 32768] }
+          - Exact: [1024, 2, 1, 5]
+          - Exact: [1024, 2, 1, 2560]
+          - Exact: [1024, 1024, 1, 5]
+          - Exact: [1024, 1024, 1, 385]
+          - Exact: [1024, 1024, 1, 2560]
+          - Exact: [1024, 4096, 1, 2560]
+          - Exact: [1024, 30522, 1, 385]
+          - Exact: [4096, 1024, 1, 2560]
+          - Exact: {sizes: [64, 512, 96, 512], stridesA: [-1, 64, 32768], stridesB: [-1, 512, 262144], stridesC: [-1, 64, 32768], stridesD: [-1, 64, 32768] }
+          - Exact: [1024, 2, 1, 6]
+          - Exact: [1024, 2, 1, 3072]
+          - Exact: [1024, 1024, 1, 6]
+          - Exact: [1024, 1024, 1, 462]
+          - Exact: [1024, 1024, 1, 3072]
+          - Exact: [1024, 4096, 1, 3072]
+          - Exact: [1024, 30522, 1, 462]
+          - Exact: [4096, 1024, 1, 3072]
+          - Exact: {sizes: [64, 128, 128, 128], stridesA: [-1, 64, 8192], stridesB: [-1, 128, 16384], stridesC: [-1, 64, 8192], stridesD: [-1, 64, 8192] }
+          - Exact: [1024, 2, 1, 8]
+          - Exact: [1024, 2, 1, 1024]
+          - Exact: [1024, 1024, 1, 8]
+          - Exact: [1024, 1024, 1, 160]
+          - Exact: [1024, 1024, 1, 1024]
+          - Exact: [1024, 4096, 1, 1024]
+          - Exact: [1024, 30522, 1, 160]
+          - Exact: [4096, 1024, 1, 1024]
+          - Exact: {sizes: [64, 128, 144, 128], stridesA: [-1, 64, 8192], stridesB: [-1, 128, 16384], stridesC: [-1, 64, 8192], stridesD: [-1, 64, 8192] }
+          - Exact: [1024, 2, 1, 9]
+          - Exact: [1024, 2, 1, 1152]
+          - Exact: [1024, 1024, 1, 9]
+          - Exact: [1024, 1024, 1, 180]
+          - Exact: [1024, 1024, 1, 1152]
+          - Exact: [1024, 4096, 1, 1152]
+          - Exact: [1024, 30522, 1, 180]
+          - Exact: [4096, 1024, 1, 1152]
+          - Exact: [13, 512, 1, 32768]
+          - Exact: [256, 1, 1, 32768]
+          - Exact: [256, 128, 1, 32768]
+          - Exact: [256, 32768, 1, 1]
+          - Exact: [479, 1024, 1, 32768]
+          - Exact: [512, 256, 1, 32768]
+          - Exact: [1024, 512, 1, 32768]
+          - Exact: [1024, 1024, 1, 32768]
+          - Exact: {sizes: [64, 128, 512, 128], stridesA: [-1, 64, 8192], stridesB: [-1, 128, 16384], stridesC: [-1, 64, 8192], stridesD: [-1, 64, 8192] }
+          - Exact: {sizes: [128, 64, 512, 128], stridesA: [-1, 128, 16384], stridesB: [-1, 64, 8192], stridesC: [-1, 128, 16384], stridesD: [-1, 128, 16384] }
+          - Exact: [1024, 2, 1, 32]
+          - Exact: [1024, 1024, 1, 32]
+          - Exact: [1024, 1024, 1, 4096]
+          - Exact: [1024, 4096, 1, 4096]
+          - Exact: [1024, 30528, 1, 4096]
+          - Exact: [4096, 1024, 1, 4096]
+          - Exact: {sizes: [512, 64, 64, 512], stridesA: [-1, 512, 262144], stridesB: [-1, 64, 32768], stridesC: [-1, 512, 32768], stridesD: [-1, 512, 32768] }
+          - Exact: [1024, 1024, 1, 4]
+          - Exact: [1024, 30528, 1, 2048]
+          - Exact: {sizes: [4, 64, 32768, 4], stridesA: [-1, 4, 16], stridesB: [-1, 2097152, 64], stridesC: [-1, 4, 256], stridesD: [-1, 4, 256] }
+          - Exact: {sizes: [4, 64, 38400, 4], stridesA: [-1, 4, 16], stridesB: [-1, 2457600, 64], stridesC: [-1, 4, 256], stridesD: [-1, 4, 256] }
+          - Exact: {sizes: [64, 4, 32768, 4], stridesA: [-1, 2097152, 64], stridesB: [-1, 4, 16], stridesC: [-1, 64, 256], stridesD: [-1, 64, 256] }
+          - Exact: {sizes: [64, 4, 38400, 4], stridesA: [-1, 2457600, 64], stridesB: [-1, 4, 16], stridesC: [-1, 64, 256], stridesD: [-1, 64, 256] }
+          - Exact: [1024, 1024, 1, 8192]
+          - Exact: [1024, 1024, 1, 9600]
+          - Exact: [1024, 4096, 1, 8192]
+          - Exact: [1024, 4096, 1, 9600]
+          - Exact: [1024, 33712, 1, 8192]
+          - Exact: [1024, 33712, 1, 9600]
+          - Exact: [4096, 1024, 1, 8192]
+          - Exact: [4096, 1024, 1, 9600]
+          - Exact: [1024, 1024, 1, 10064]
+          - Exact: [1024, 1024, 1, 10080]
+          - Exact: [1024, 1024, 1, 10200]
+          - Exact: [1024, 1024, 1, 3840]
+          - Exact: [1024, 1024, 1, 3968]
+          - Exact: [1024, 1024, 1, 6528]
+          - Exact: [1024, 1024, 1, 7104]
+          - Exact: [1024, 1024, 1, 7200]
+          - Exact: [1024, 1024, 1, 8064]
+          - Exact: [1024, 1024, 1, 8160]
+          - Exact: [1024, 1024, 1, 9216]
+          - Exact: [1024, 1024, 1, 9520]
+          - Exact: [1024, 4096, 1, 10064]
+          - Exact: [1024, 4096, 1, 10080]
+          - Exact: [1024, 4096, 1, 10200]
+          - Exact: [1024, 4096, 1, 3840]
+          - Exact: [1024, 4096, 1, 3968]
+          - Exact: [1024, 4096, 1, 6528]
+          - Exact: [1024, 4096, 1, 7104]
+          - Exact: [1024, 4096, 1, 7200]
+          - Exact: [1024, 4096, 1, 8064]
+          - Exact: [1024, 4096, 1, 8160]
+          - Exact: [1024, 4096, 1, 9216]
+          - Exact: [1024, 4096, 1, 9520]
+          - Exact: [1024, 42720, 1, 10080]
+          - Exact: [1024, 42720, 1, 3968]
+          - Exact: [1024, 42720, 1, 6528]
+          - Exact: [1024, 42720, 1, 7104]
+          - Exact: [1024, 42720, 1, 7200]
+          - Exact: [1024, 42720, 1, 9520]
+          - Exact: [4096, 1024, 1, 10064]
+          - Exact: [4096, 1024, 1, 10080]
+          - Exact: [4096, 1024, 1, 10200]
+          - Exact: [4096, 1024, 1, 3840]
+          - Exact: [4096, 1024, 1, 3968]
+          - Exact: [4096, 1024, 1, 6528]
+          - Exact: [4096, 1024, 1, 7104]
+          - Exact: [4096, 1024, 1, 7200]
+          - Exact: [4096, 1024, 1, 8064]
+          - Exact: [4096, 1024, 1, 8160]
+          - Exact: [4096, 1024, 1, 9216]
+          - Exact: [4096, 1024, 1, 9520]
+          - Exact: {sizes: [14, 64, 10880, 14], stridesA: [-1, 14, 196], stridesB: [-1, 696320, 64], stridesC: [-1, 14, 896], stridesD: [-1, 14, 896] }
+          - Exact: {sizes: [15, 64, 10880, 14], stridesA: [-1, 15, 210], stridesB: [-1, 696320, 64], stridesC: [-1, 15, 960], stridesD: [-1, 15, 960] }
+          - Exact: {sizes: [15, 64, 7680, 15], stridesA: [-1, 15, 225], stridesB: [-1, 491520, 64], stridesC: [-1, 15, 960], stridesD: [-1, 15, 960] }
+          - Exact: {sizes: [15, 64, 10880, 15], stridesA: [-1, 15, 225], stridesB: [-1, 696320, 64], stridesC: [-1, 15, 960], stridesD: [-1, 15, 960] }
+          - Exact: {sizes: [17, 64, 7680, 15], stridesA: [-1, 17, 255], stridesB: [-1, 491520, 64], stridesC: [-1, 17, 1088], stridesD: [-1, 17, 1088] }
+          - Exact: {sizes: [17, 64, 6144, 17], stridesA: [-1, 17, 289], stridesB: [-1, 393216, 64], stridesC: [-1, 17, 1088], stridesD: [-1, 17, 1088] }
+          - Exact: {sizes: [17, 64, 7680, 17], stridesA: [-1, 17, 289], stridesB: [-1, 491520, 64], stridesC: [-1, 17, 1088], stridesD: [-1, 17, 1088] }
+          - Exact: {sizes: [21, 64, 6144, 17], stridesA: [-1, 21, 357], stridesB: [-1, 393216, 64], stridesC: [-1, 21, 1344], stridesD: [-1, 21, 1344] }
+          - Exact: {sizes: [21, 64, 6144, 21], stridesA: [-1, 21, 441], stridesB: [-1, 393216, 64], stridesC: [-1, 21, 1344], stridesD: [-1, 21, 1344] }
+          - Exact: {sizes: [24, 64, 4736, 24], stridesA: [-1, 24, 576], stridesB: [-1, 303104, 64], stridesC: [-1, 24, 1536], stridesD: [-1, 24, 1536] }
+          - Exact: {sizes: [30, 64, 2048, 30], stridesA: [-1, 30, 900], stridesB: [-1, 131072, 64], stridesC: [-1, 30, 1920], stridesD: [-1, 30, 1920] }
+          - Exact: {sizes: [30, 64, 2048, 31], stridesA: [-1, 30, 930], stridesB: [-1, 131072, 64], stridesC: [-1, 30, 1920], stridesD: [-1, 30, 1920] }
+          - Exact: {sizes: [31, 64, 2048, 31], stridesA: [-1, 31, 961], stridesB: [-1, 131072, 64], stridesC: [-1, 31, 1984], stridesD: [-1, 31, 1984] }
+          - Exact: {sizes: [32, 64, 4608, 32], stridesA: [-1, 32, 1024], stridesB: [-1, 294912, 64], stridesC: [-1, 32, 2048], stridesD: [-1, 32, 2048] }
+          - Exact: {sizes: [32, 64, 4608, 35], stridesA: [-1, 32, 1120], stridesB: [-1, 294912, 64], stridesC: [-1, 32, 2048], stridesD: [-1, 32, 2048] }
+          - Exact: {sizes: [34, 64, 4736, 24], stridesA: [-1, 34, 816], stridesB: [-1, 303104, 64], stridesC: [-1, 34, 2176], stridesD: [-1, 34, 2176] }
+          - Exact: {sizes: [34, 64, 4736, 34], stridesA: [-1, 34, 1156], stridesB: [-1, 303104, 64], stridesC: [-1, 34, 2176], stridesD: [-1, 34, 2176] }
+          - Exact: {sizes: [35, 64, 4608, 35], stridesA: [-1, 35, 1225], stridesB: [-1, 294912, 64], stridesC: [-1, 35, 2240], stridesD: [-1, 35, 2240] }
+          - Exact: {sizes: [64, 14, 10880, 14], stridesA: [-1, 696320, 64], stridesB: [-1, 14, 196], stridesC: [-1, 64, 896], stridesD: [-1, 64, 896] }
+          - Exact: {sizes: [64, 15, 10880, 14], stridesA: [-1, 696320, 64], stridesB: [-1, 15, 210], stridesC: [-1, 64, 960], stridesD: [-1, 64, 960] }
+          - Exact: {sizes: [64, 15, 7680, 15], stridesA: [-1, 491520, 64], stridesB: [-1, 15, 225], stridesC: [-1, 64, 960], stridesD: [-1, 64, 960] }
+          - Exact: {sizes: [64, 15, 10880, 15], stridesA: [-1, 696320, 64], stridesB: [-1, 15, 225], stridesC: [-1, 64, 960], stridesD: [-1, 64, 960] }
+          - Exact: {sizes: [64, 17, 7680, 15], stridesA: [-1, 491520, 64], stridesB: [-1, 17, 255], stridesC: [-1, 64, 1088], stridesD: [-1, 64, 1088] }
+          - Exact: {sizes: [64, 17, 6144, 17], stridesA: [-1, 393216, 64], stridesB: [-1, 17, 289], stridesC: [-1, 64, 1088], stridesD: [-1, 64, 1088] }
+          - Exact: {sizes: [64, 17, 7680, 17], stridesA: [-1, 491520, 64], stridesB: [-1, 17, 289], stridesC: [-1, 64, 1088], stridesD: [-1, 64, 1088] }
+          - Exact: {sizes: [64, 21, 6144, 17], stridesA: [-1, 393216, 64], stridesB: [-1, 21, 357], stridesC: [-1, 64, 1344], stridesD: [-1, 64, 1344] }
+          - Exact: {sizes: [64, 21, 6144, 21], stridesA: [-1, 393216, 64], stridesB: [-1, 21, 441], stridesC: [-1, 64, 1344], stridesD: [-1, 64, 1344] }
+          - Exact: {sizes: [64, 24, 4736, 24], stridesA: [-1, 303104, 64], stridesB: [-1, 24, 576], stridesC: [-1, 64, 1536], stridesD: [-1, 64, 1536] }
+          - Exact: {sizes: [64, 30, 2048, 30], stridesA: [-1, 131072, 64], stridesB: [-1, 30, 900], stridesC: [-1, 64, 1920], stridesD: [-1, 64, 1920] }
+          - Exact: {sizes: [64, 30, 2048, 31], stridesA: [-1, 131072, 64], stridesB: [-1, 30, 930], stridesC: [-1, 64, 1920], stridesD: [-1, 64, 1920] }
+          - Exact: {sizes: [64, 31, 2048, 31], stridesA: [-1, 131072, 64], stridesB: [-1, 31, 961], stridesC: [-1, 64, 1984], stridesD: [-1, 64, 1984] }
+          - Exact: {sizes: [64, 32, 4608, 32], stridesA: [-1, 294912, 64], stridesB: [-1, 32, 1024], stridesC: [-1, 64, 2048], stridesD: [-1, 64, 2048] }
+          - Exact: {sizes: [64, 32, 4608, 35], stridesA: [-1, 294912, 64], stridesB: [-1, 32, 1120], stridesC: [-1, 64, 2048], stridesD: [-1, 64, 2048] }
+          - Exact: {sizes: [64, 34, 4736, 24], stridesA: [-1, 303104, 64], stridesB: [-1, 34, 816], stridesC: [-1, 64, 2176], stridesD: [-1, 64, 2176] }
+          - Exact: {sizes: [64, 34, 4736, 34], stridesA: [-1, 303104, 64], stridesB: [-1, 34, 1156], stridesC: [-1, 64, 2176], stridesD: [-1, 64, 2176] }
+          - Exact: {sizes: [64, 35, 4608, 35], stridesA: [-1, 294912, 64], stridesB: [-1, 35, 1225], stridesC: [-1, 64, 2240], stridesD: [-1, 64, 2240] }
+          - Exact: [512, 64, 1, 512]
+          - Exact: [64, 512, 1, 512]
+          - Exact: [1024, 4096, 1, 2048]
+          - Exact: [1024, 2, 1, 2048]
+          - Exact: [1024, 1024, 1, 2048]
+          - Exact: [4096, 1024, 1, 2048]
+          - Exact: [64, 128, 1, 128]
+          - Exact: [1024, 1024, 1, 1024]
+          - Exact: [1024, 2, 1, 1024]
+          - Exact: [1024, 4096, 1, 1024]
+          - Exact: [128, 64, 1, 128]
+          - Exact: [4096, 1024, 1, 1024]
+          - Exact: [74, 2048, 1, 512]
+          - Exact: [2048, 2048, 1, 512]
+          - Exact: [1024, 1024, 1, 512]
+          - Exact: [2048, 1, 1, 512]
+          - Exact: [1024, 64, 1, 512]
+          - Exact: [5, 64, 1, 5]
+          - Exact: [2048, 512, 1, 1]
+          - Exact: [1600, 1024, 1, 512]
+          - Exact: [512, 32, 1, 1600]
+          - Exact: [33, 32, 1, 33]
+          - Exact: [560, 1024, 1, 1600]
+          - Exact: [1024, 1600, 1, 1]
+          - Exact: [1024, 1024, 1, 1600]
+          - Exact: [512, 512, 1, 1600]
+          - Exact: [1024, 1, 1, 1600]
+
+LibraryLogic:
+    ScheduleName: "arcturus"
+    DeviceNames: ["Device 7380", "Device 7388", "Device 738c", "Device 7390"]
+    ArchitectureName: "gfx908"
+
+LibraryClient:
