@@ -2828,6 +2828,9 @@ class Solution:
       if state["MatrixInstBN"] > 1 and state["MatrixInstN"] == 4:
         reject(state, "storeRemap doesn't support MI4x4 multi blocks in N direction yet")
         return
+      if not math.log(state["MacroTile0"],2).is_integer():
+        reject(state, "storeRemap only supports power-of-2 MT0 for now")
+        return
 
       srMinVw = 1
       srMaxVw = 8
