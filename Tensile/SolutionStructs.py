@@ -2871,8 +2871,8 @@ class Solution:
     if state["1LDSBuffer"]:
       if not state["PrefetchGlobalRead"]:
         reject(state, "PGR=0 already use 1 LDS buffer only")
-      if not state["LocalReadVectorWidth"] > state["ProblemType"]["DataType"].numMIInput() and not state["ScheduleIterAlg"] == 2:
-        reject(state, "(currently) require wider localread to avoid reading and writing same LDS buffer at same time")
+      if not state["ScheduleIterAlg"] == 2 and not state["ScheduleIterAlg"] == 3:
+        reject(state, "1LDSBuffer only support SIA2 or SIA3")
       state["LdsOffsetB"] = ldsNumElementsAlignedA
       ldsNumElementsAB = ldsNumElementsAlignedA + ldsNumElementsB
 
