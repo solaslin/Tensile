@@ -10,6 +10,7 @@ GlobalParameters:
   LegacyComponents: False
   PrintConvolutionUsage: 0
   PrintSolutionRejectionReason: 0
+  MergeFiles: False # in 2272 STG1, MergeFiles not works
 
 BenchmarkProblems:
   -
