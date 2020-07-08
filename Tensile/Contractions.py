@@ -413,14 +413,23 @@ class Solution:
 
     @classmethod
     def FromOriginalState(cls, d, deviceInfo=None):
+        # rv is the "Contractions.Solution"
+        #
+        # Ethan: d is s._state, where s is "SolutionStruct.Solution"
+        # Note that SolutionStruct.Solution != Contraction.Solution !!
+        #
         rv = cls()
 
 
         if 'SolutionNameMin' in d:
             rv.name = d['SolutionNameMin']
 
+        #
+        # Ethan: d['ProblemType'] is SolutionStruct.ProblemType, but rv.problemType is Contractions.ProblemType
+        #
         rv.problemType = ProblemType.FromOriginalState(d['ProblemType'])
 
+        # Ethan: Contractions.ProblemPredicate class, not SolutionStruct
         rv.problemPredicate = ProblemPredicate.FromOriginalState(d, rv.problemType)
 
         if 'DebugKernel' in d:
@@ -443,6 +452,11 @@ class Solution:
             else:
                 d['ISA'] = [0,0,0]
 
+        #
+        # Ethan: rv.originalSolution is [.....], but OriginalSolution is SolutionStruct.Solution (import as), this is a mapping, 
+        # and will call the _init_ of SolutionStruct.Solution
+        # NOTE: d is from SolutionStruct.Solution, which is already assigned Parameters, so the following line seems buggy...
+        #
         rv.originalSolution = OriginalSolution(d)
         # hacky, can just construct Convolution yet again?
         rv.problemType.convolution = rv.originalSolution["ProblemType"].convolution

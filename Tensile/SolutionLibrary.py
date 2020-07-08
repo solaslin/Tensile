@@ -279,8 +279,9 @@ class MasterSolutionLibrary:
         rv = cls(solutions, library)
         return rv
 
-    @classmethod
+    @classmethod    
     def BenchmarkingLibrary(cls, solutions):
+        # Ethan: The solutions is SolutionStruct.Solution ! , and will be converted to Contractions.Solution
         solutionObjs = list([Contractions.Solution.FromOriginalState(s._state) for s in solutions])
         cls.FixSolutionIndices(solutionObjs)
 
