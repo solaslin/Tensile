@@ -1639,6 +1639,14 @@ class Solution:
         for (key,value) in self["ProblemType"].convolution.solutionParms.items():
             self._state[key]=value
     Solution.assignDerivedParameters(self._state)
+
+    #
+    # Ethan: Debug purpose
+    #
+    # for key in config:
+    #   if key != "ProblemType" and self._state[key] != config[key]:
+    #     print("inconsistent solution key: %s: %s vs %s" % (key, self._state[key], config[key]) )
+
     self._name = None
 
   # these keys are copied from ProblemType to internal that may be overridden
