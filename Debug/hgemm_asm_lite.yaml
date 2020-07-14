@@ -4,7 +4,7 @@ GlobalParameters:
   # ForceRedoBenchmarkProblems: False
   # ForceRedoLibraryLogic: False
   # ForceRedoLibraryClient: False
-  CMakeBuildType: Release
+  # CMakeBuildType: Debug
   EnqueuesPerSync: 1
   SyncsPerBenchmark: 1
   LibraryPrintDebug: False
@@ -17,9 +17,13 @@ GlobalParameters:
   # PinClocks: True
   SleepPercent: 200
   DataInitTypeBeta : 0
-  NewClient: 2
+  # NewClient: 2
   PrintSolutionRejectionReason: True
+  NumBenchmarks: 10  
   # LegacyComponents: False
+  
+  CSVExportWinner: True
+  CSVMergeSameProblemID: True
 
 BenchmarkProblems:
 
@@ -29,12 +33,18 @@ BenchmarkProblems:
   -
     - # ProblemType
       OperationType: GEMM
+      # OperationType: ConvolutionBackwardData
       DataType: h
       HighPrecisionAccumulate: True
       TransposeA: False
       TransposeB: False
       UseBeta: True
       Batched: True
+      # ConvolutionConfig:
+      # - Dilation: 1x1
+      # - Filter: 1x1
+      # - Stride: 1x1
+      # - TensorAFormat: NCHW      
 
     - # BenchmarkProblemSizeGroup - Standard
       InitialSolutionParameters:
@@ -47,16 +57,16 @@ BenchmarkProblems:
         - PrefetchLocalRead: [True]
         - GlobalSplitU: [1]
       ForkParameters:
-        # - PrefetchGlobalRead: [False, True]
+        - PrefetchGlobalRead: [False, True]
         - ThreadTile:
           # - [ 8, 8 ]
           # - [ 16, 8 ]
           - [ 8, 16 ]
         - WorkGroup:
           - [ 16, 16, 1 ]
-        # - WorkGroupMapping: [1, 8]
-        # - DepthU: [ 8, 16, 32 ]
-        - DepthU: [ 16 ]
+        - WorkGroupMapping: [1, 8]
+        - DepthU: [ 8, 16, 32 ]
+        # - DepthU: [ 16 ]
         # - VectorWidth: [-1]
       BenchmarkForkParameters:
       # JoinParameters:
@@ -65,7 +75,9 @@ BenchmarkProblems:
       BenchmarkFinalParameters:
         - ProblemSizes:
           # - Range: [ [64, 64, 64, 7000], [64, 64, 64, 7000], [1], [5504] ]
+          - Range: [ [64, 64, 64, 7000], [64], [1], [5504] ]
           - Exact: [ 5504, 5504, 1, 5504 ]
+          # - Conv: { n: 64, c: 1280, h: 8, w: 8, k: 192, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
 
   # ########################################
   # # NN - VectorWidth Correctness
@@ -316,4 +328,4 @@ LibraryLogic:
     DeviceNames: ["Device 7380", "Device 7388", "Device 738c", "Device 7390"]
     ArchitectureName: "gfx908"
 
-LibraryClient:
+# LibraryClient:

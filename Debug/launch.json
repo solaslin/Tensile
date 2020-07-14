@@ -5,11 +5,41 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "lldb",
+            "request": "launch",
+            "name": "LLDB Launch",
+            "program": "${workspaceFolder}/Tensile/Result/Debug/0_Build/client/tensile_client",
+            "//args": ["--platform-idx", "0", "--device-idx", "0", "--init-alpha", "2", "--init-beta", "0", "--init-d", "0", "--init-c", "3", "--init-a", "3", "--init-b", "3", "--c-equal-d", "1", "--print-valids", "0", "--print-max", "4", "--num-benchmarks", "1", "--num-elements-to-validate", "65536", "--num-enqueues-per-sync", "1", "--num-syncs-per-benchmark", "1", "--use-gpu-timer", "1", "--sleep-percent", "200", "--benchmark-solutions", "0"],
+            "args": ["--config-file", "${workspaceFolder}/Tensile/Result/Debug/1_BenchmarkProblems/Cijk_Ailk_Bljk_HBH_00/00_Final/build/../source/ClientParameters.ini"],
+            "cwd": "${workspaceFolder}",
+            "//cwd": "${workspaceFolder}/Tensile/EthanTest/sgemm_asm_bufferload/1_BenchmarkProblems/Cijk_Ailk_Bljk_SB_00/00_Final/source"
+        },
+        {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Tensile/Debug/Result/0_Build/client/tensile_client",            
+            "//args": ["--platform-idx", "0", "--device-idx", "0", "--init-alpha", "2", "--init-beta", "0", "--init-d", "0", "--init-c", "3", "--init-a", "3", "--init-b", "3", "--c-equal-d", "1", "--print-valids", "0", "--print-max", "4", "--num-benchmarks", "1", "--num-elements-to-validate", "65536", "--num-enqueues-per-sync", "1", "--num-syncs-per-benchmark", "1", "--use-gpu-timer", "1", "--sleep-percent", "200", "--benchmark-solutions", "0"],
+            "args": ["--config-file", "${workspaceFolder}/Tensile/Debug/Result/1_BenchmarkProblems/Cijk_Ailk_Bljk_HBH_00/00_Final/build/../source/ClientParameters.ini"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",       
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
             "program": "Tensile/Tensile/bin/Tensile",
-            "args": ["Tensile/Debug/hgemm_asm_lite.yaml", "Tensile/Debug/Result"],
+            "args": ["--cxx-compiler=hcc", "Tensile/Debug/hgemm_asm_lite.yaml", "Tensile/Debug/Result"],
             "//program": "Tensile/convertToEff.py",
             "//args": ["Tensile/LibraryLogic", "Tensile/LibraryLogicOut", "arcturus", "1087"],
             "console": "integratedTerminal"
