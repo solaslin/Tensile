@@ -1286,19 +1286,20 @@ class KernelWriter(metaclass=abc.ABCMeta):
           for plrIdx in range(0, self.numItersPLR):
             pack[plrIdx] = Code.Module()
             for iui in range(0,kernel["InnerUnroll"]):
-              # Reading 16-bit data from LDS requires packing when ECC enabled
-              kl.append(self.comment("prefetch local a"))
-              localReadCodeA, packCodeA = self.localReadDo(kernel, plrIdx, iui, 0, tensorParametersA)
-              kl.append(localReadCodeA)
-              kl.append(self.comment("prefetch local b"))
-              localReadCodeB, packCodeB = self.localReadDo(kernel, plrIdx, iui, 0, tensorParametersB)
-              kl.append(localReadCodeB)
-              pack[plrIdx].addCode(packCodeA)
-              pack[plrIdx].addCode(packCodeB)
-              kl.append(self.comment1("local read increment a"))
-              kl.append(self.localReadInc(kernel, iui, tensorParametersA))
-              kl.append(self.comment1("local read increment b"))
-              kl.append(self.localReadInc(kernel, iui, tensorParametersB))
+              if iui*self.numReadsIterCoalesced < kernel["InnerUnroll"]:
+                # Reading 16-bit data from LDS requires packing when ECC enabled
+                kl.append(self.comment("prefetch local a"))
+                localReadCodeA, packCodeA = self.localReadDo(kernel, plrIdx*self.numIterPerCoalescedRead, iui*self.numReadsIterCoalesced, 0, tensorParametersA)
+                kl.append(localReadCodeA)
+                kl.append(self.comment("prefetch local b"))
+                localReadCodeB, packCodeB = self.localReadDo(kernel, plrIdx*self.numIterPerCoalescedRead, iui*self.numReadsIterCoalesced, 0, tensorParametersB)
+                kl.append(localReadCodeB)
+                pack[plrIdx].addCode(packCodeA)
+                pack[plrIdx].addCode(packCodeB)
+                kl.append(self.comment1("local read increment a"))
+                kl.append(self.localReadInc(kernel, iui, tensorParametersA))
+                kl.append(self.comment1("local read increment b"))
+                kl.append(self.localReadInc(kernel, iui, tensorParametersB))
 
       kl.append(self.closeString(kernel))
       kl.append(self.openString(kernel))
