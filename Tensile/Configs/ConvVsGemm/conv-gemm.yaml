@@ -1,0 +1,160 @@
+GlobalParameters:
+  MinimumRequiredVersion: 4.1.0
+  NumElementsToValidate: 0
+  ValidationMaxToPrint: 16
+  PinClocks: False
+  # SleepPercent: 0
+  EnqueuesPerSync: 1
+  KernelTime: True
+  NewClient: 2
+  # NumBenchmarks: 3
+  # this is for convolution so can use alpha 1, beta 0
+  DataInitTypeAlpha: 1
+  DataInitTypeBeta: 0
+  LegacyComponents: False
+  PrintConvolutionUsage: 0
+  PrintSolutionRejectionReason: 0
+
+  CSVExportWinner: True
+  CSVMergeSameProblemID: True
+  # CMakeBuildType: Debug
+
+BenchmarkProblems:
+  ########################################
+  # ConvolutionBWD
+  ########################################
+  -
+    - # ProblemType      
+      OperationType: ConvolutionBackwardData
+      # OperationType: GEMM
+      DataType: B
+      DestDataType: B
+      ComputeDataType: s
+      HighPrecisionAccumulate: True
+      # TransposeA: False
+      # TransposeB: True
+      UseBeta: True
+      # Batched: True
+      ConvolutionConfig:
+      - Dilation: 1x1
+      - Filter: 1x1
+      - Stride: 1x1
+      - TensorAFormat: NCHW
+      #TileAwareSelection: True
+    -
+      InitialSolutionParameters:
+      BenchmarkCommonParameters:
+        - KernelLanguage: ["Assembly"]
+        - EdgeType: ["ShiftPtr"]
+      ForkParameters:
+        - MatrixInstruction:
+          - [32, 32, 4, 1]
+          # - [16, 16, 8, 1]                    # problem 2
+        - ThreadTile:
+          - [ 1, 32 ]
+          # - [ 2, 32 ]                         # problem 2
+        - WorkGroup:
+          - [ 64, 4, 1 ]
+          # - [ 32, 8, 1 ]                      # problem 2
+        - PrefetchGlobalRead: [1]
+        - PrefetchLocalRead: [1]
+        - DepthU: [32]
+        - VectorWidth: [2]
+        - GlobalReadVectorWidth: [8]
+        # - GlobalReadVectorWidth: [2]          # problem 2
+        - SuppressNoLoadLoop: [0]
+        - OptNoLoadLoop: [1]
+        - ScheduleLocalWrite: [1]
+        - ScheduleGlobalRead: [1]
+        - ScheduleIterAlg: [3]
+        - InnerUnroll: [1]
+        - ExpandPointerSwap: [1]
+        - StoreRemapVectorWidth: [4]
+        - StaggerU: [0]
+        - WorkGroupMapping: [1]
+        - PackBatchDims: [0]
+        - FractionalLoad: [1]
+        - AssertFree0ElementMultiple: [8]
+        # - AssertFree0ElementMultiple: [1]     # problem 2
+      BenchmarkForkParameters:
+      BenchmarkJoinParameters:
+      BenchmarkFinalParameters:
+        - ProblemSizes:
+# inception 1x1 convs:
+          - Conv: { n: 64, c: 1280, h: 8, w: 8, k: 192, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+          # odd M
+          # - Conv: { n: 64, c: 64, h: 73, w: 73, k: 80, y: 1, x: 1, p: 0, q: 0, u: 1, v: 1, l: 1, j: 1 }
+
+#   ########################################
+#   # NT - standard
+#   ########################################
+#   -
+#     - # ProblemType      
+#       # OperationType: ConvolutionBackwardData
+#       OperationType: GEMM
+#       DataType: B
+#       DestDataType: B
+#       ComputeDataType: s
+#       HighPrecisionAccumulate: True
+#       TransposeA: False
+#       TransposeB: True
+#       UseBeta: True
+#       Batched: True
+#       # ConvolutionConfig:
+#       # - Dilation: 1x1
+#       # - Filter: 1x1
+#       # - Stride: 1x1
+#       # - TensorAFormat: NCHW
+#       #TileAwareSelection: True
+#     -
+#       InitialSolutionParameters:
+#       BenchmarkCommonParameters:
+#         - KernelLanguage: ["Assembly"]
+#         - EdgeType: ["ShiftPtr"]
+#       ForkParameters:
+#         - MatrixInstruction:
+#           - [32, 32, 4, 1]
+#           # - [16, 16, 2, 4]                    # problem 1 gemm
+#           # - [16, 16, 8, 1]                    # problem 2
+#         - ThreadTile:
+#           # - [ 1, 16 ]                         # problem 1 gemm
+#           - [ 1, 32 ]
+#           # - [ 2, 32 ]                         # problem 2
+#         - WorkGroup:
+#           - [ 64, 4, 1 ]
+#           # - [ 32, 8, 1 ]                      # problem 2
+#         - PrefetchGlobalRead: [1]
+#         - PrefetchLocalRead: [1]
+#         - DepthU: [32]
+#         - VectorWidth: [2]
+#         - GlobalReadVectorWidth: [8]
+#         # - GlobalReadVectorWidth: [2]          # problem 2
+#         - SuppressNoLoadLoop: [0]
+#         - OptNoLoadLoop: [1]
+#         - ScheduleLocalWrite: [1]
+#         - ScheduleGlobalRead: [1]
+#         - ScheduleIterAlg: [3]
+#         - InnerUnroll: [1]
+#         - ExpandPointerSwap: [1]
+#         - StoreRemapVectorWidth: [4]
+#         - StaggerU: [0]
+#         - WorkGroupMapping: [1]
+#         - PackBatchDims: [0]
+#         - FractionalLoad: [1]
+#         - AssertFree0ElementMultiple: [8]
+#         # - AssertFree0ElementMultiple: [1]     # problem 2
+#       BenchmarkForkParameters:
+#       BenchmarkJoinParameters:
+#       BenchmarkFinalParameters:
+#         - ProblemSizes:
+# # inception 1x1 convs:        
+#           - Range: [[64],[1280],[64],[192]]
+#           # odd M
+#           # - Range: [[5329],[64],[64],[80]]
+
+LibraryLogic:
+  ScheduleName: "arcturus"
+  DeviceNames: ["Device 7380", "Device 7388", "Device 738c", "Device 7390"]
+  ArchitectureName: "gfx908"
+
+# LibraryClient:
