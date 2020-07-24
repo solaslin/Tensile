@@ -7015,15 +7015,20 @@ class KernelWriterAssembly(KernelWriter):
         imod.addCode(kStr)
         localRead2Perpendicular = False
         instructions = self.memoryInstructions[self.version]
-        localReadWidth = (kernel["ProblemType"]["DataType"].numMIInput() * self.tPA["bpe"]) // self.bpr
+
+        localReadWidth = self.tPA["bpe"] / self.bpr
+        if kernel["UnrollMajorLDSA"]:
+          localReadWidth = (kernel["ProblemType"]["DataType"].numMIInput() * self.tPA["bpe"]) // self.bpr
         self.localReadInstructionIdxA = \
           self.selectMemoryInstruction("LocalRead", localReadWidth, \
           kernel["LocalRead2A"], \
           self.localRead2CoalescedA, localRead2Perpendicular,
           [self.localReadStrideCoalescedA] )
-        self.localReadInstructionA = instructions["LocalRead"][ \
-          self.localReadInstructionIdxA]
-        localReadWidth = (kernel["ProblemType"]["DataType"].numMIInput() * self.tPB["bpe"]) // self.bpr
+        self.localReadInstructionA = instructions["LocalRead"][self.localReadInstructionIdxA]
+
+        localReadWidth = self.tPB["bpe"] / self.bpr
+        if kernel["UnrollMajorLDSA"]:
+          localReadWidth = (kernel["ProblemType"]["DataType"].numMIInput() * self.tPB["bpe"]) // self.bpr
         self.localReadInstructionIdxB = \
           self.selectMemoryInstruction("LocalRead", localReadWidth, \
           kernel["LocalRead2B"], \
@@ -7031,6 +7036,7 @@ class KernelWriterAssembly(KernelWriter):
           [self.localReadStrideCoalescedB] )
         self.localReadInstructionB = instructions["LocalRead"][ \
           self.localReadInstructionIdxB]
+
         self.tPA["localReadInstruction"] = self.localReadInstructionA
         self.tPB["localReadInstruction"] = self.localReadInstructionB
 
@@ -7131,7 +7137,7 @@ class KernelWriterAssembly(KernelWriter):
           if kernel["UnrollMajorLDS%s" % tP["tensorChar"]]:
             tP["localReadOffset"] += kernel["LocalSplitU"] * kernel["MatrixInstK"] * self.numReadsIterCoalesced
           else:
-            tP["localReadOffset"] += kernel["LocalSplitU"] * (kernel["MacroTile%u"%tP["tensorIdx"]] + LdsPad) * kernel["MatrixInstK"]
+            tP["localReadOffset"] += kernel["LocalSplitU"] * (kernel["MacroTile%u"%tP["tensorIdx"]] + LdsPad) * kernel["MatrixInstK"] * self.numReadsIterCoalesced
         else:
           tP["localReadOffset"] += kernel["LocalSplitU"] * (kernel["MacroTile%u"%tP["tensorIdx"]] + LdsPad)
         kStr += self.comment1("N/A, lro->%d" % tP["localReadOffset"])
@@ -7242,7 +7248,7 @@ class KernelWriterAssembly(KernelWriter):
     needPack = blockWidth < 1
     pack     = Code.Module("pack%s_I%s"%(tc,iui))
     if needPack:
-      tmpVgprIdx = self.vgprPool.checkOut(self.numVgprValuAPerBlock if tc == 'A' else self.numVgprValuBPerBlock)
+      tmpVgprIdx = self.vgprPool.checkOut(self.numVgprValuAPerBlock*self.numReadsIterCoalesced if tc == 'A' else self.numVgprValuBPerBlock*self.numReadsIterCoalesced)
       pack.addTempVgpr(tmpVgprIdx)
 
     valufIdx = 0
