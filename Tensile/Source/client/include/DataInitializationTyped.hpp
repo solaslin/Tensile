@@ -429,6 +429,24 @@ namespace Tensile
                                   << m_workspaceSize << " bytes at " << wsPtr << "\n";
                 }
 
+                // allocate remaining memory to prevend other user use GPU when benchmarking
+                CType* extra = nullptr;
+                size_t  remainingSize;
+                hipDeviceProp_t hipProps;
+                hipGetDeviceProperties(&hipProps, 0);
+                remainingSize = size_t(hipProps.totalGlobalMem);
+                while(1){
+                    if (hipSuccess == hipMalloc(&extra, remainingSize)){
+                        printf("LOCAL: GPR protect, allocate %zu Success \n",remainingSize);
+                    } else {
+                        printf("LOCAL: GPR protect, allocate %zu Fail \n",remainingSize);
+                        remainingSize = remainingSize/2;
+                    }
+                    if (remainingSize <= 1024*1024*4) {
+                        break;
+                    }
+                };
+
                 auto alpha = static_cast<AlphaType>(0);
                 auto beta  = static_cast<BetaType>(0);
 
