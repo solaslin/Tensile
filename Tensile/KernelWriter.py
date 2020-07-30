@@ -411,6 +411,8 @@ class KernelWriter(metaclass=abc.ABCMeta):
     iterCode = Code.Module()
     globalReadCode = self.perIterGlobalReadCode[iteration]
     localWriteCode = self.perIterLocalWriteCode[iteration]
+    isBarrier = kernel["LoopIters"] - self.numItersPLR
+    hasLocalRead = localReadCode.countType(Code.LocalReadInst)
     # Default schedule is other, local reads, then local writes:
     if self.scheduleIterAlg==0:
       # simple schedule, just add the modules in-order
@@ -515,7 +517,6 @@ class KernelWriter(metaclass=abc.ABCMeta):
       # Prepare and Assign parameter
       ####
       numMfmaPerIter = kernel["MIWaveTile"][0] * kernel["MIWaveTile"][1] * kernel["InnerUnroll"]
-      isBarrier = kernel["LoopIters"] - self.numItersPLR
       writeItems = list(localWriteCode.items())
       macIterItems = macIterCode.flatitems()
       readsPerIter = localReadCode.countType(Code.LocalReadInst)
@@ -769,14 +770,18 @@ class KernelWriter(metaclass=abc.ABCMeta):
       if kernel["EnableMatrixInstruction"]:
         # dataAtIter      : the data we wait is read at which iteration
         # numReadsIter    : in this loop, number of iteration we have read (data used in current loop)
-        # numPrefetchIter : in this loop, number of prefetch iteration we have read (data used in next loop)
         dataAtIterA = iteration//self.numIterPerCoalescedReadA - self.numItersPLR
         dataAtIterB = iteration//self.numIterPerCoalescedReadB - self.numItersPLR
         numReadsIterA = min(iteration+1, kernel["LoopIters"]//self.numIterPerCoalescedReadA - self.numItersPLR)
         numReadsIterB = min(iteration+1, kernel["LoopIters"]//self.numIterPerCoalescedReadB - self.numItersPLR)
         skipReadsIterA = numReadsIterA - dataAtIterA - 1 if not dataAtIterA < max(dataAtIterA,dataAtIterB) else 0
         skipReadsIterB = numReadsIterB - dataAtIterB - 1 if not dataAtIterB < max(dataAtIterA,dataAtIterB) else 0
+        # numPrefetchIter : in this loop, number of prefetch iteration we have read (data used in next loop)
+        # currently we have localReadA and localReadB if iteration >= isBarrier
+        # some case will not have localReads if PGR=0 or NoLoadLoop
+        # known bug: wider localread + numItersPLR>1 may have chance to fail.
         numPrefetchIter = (iteration//(kernel["LoopIters"]-self.numItersPLR))*((iteration+1)-(kernel["LoopIters"]-self.numItersPLR)) if kernel["PrefetchGlobalRead"] else 0
+        numPrefetchIter = 0 if iteration >= isBarrier and not hasLocalRead else numPrefetchIter
         skipReadsIterA += numPrefetchIter
         skipReadsIterB += numPrefetchIter
         # here the reads are prefetches so can skip them in the waitcnt
@@ -784,9 +789,9 @@ class KernelWriter(metaclass=abc.ABCMeta):
         localReads += self.numReadsPerIterA * skipReadsIterA + localReads + self.numReadsPerIterB * skipReadsIterB
         # some of localReads is interleaved after waitcnt in SIA3
         if kernel["ScheduleIterAlg"] == 3 and (iteration < numReadsIterA or iteration < numReadsIterB or numPrefetchIter):
-          if iteration < numReadsIterA or numPrefetchIter:
+          if (iteration < numReadsIterA and not dataAtIterA < max(dataAtIterA,dataAtIterB)) or numPrefetchIter:
             localReads -= self.numReadsPerIterA
-          if iteration < numReadsIterB or numPrefetchIter:
+          if (iteration < numReadsIterB and not dataAtIterB < max(dataAtIterA,dataAtIterB)) or numPrefetchIter:
             localReads -= self.numReadsPerIterB
           localReads += localReadsWaitcnt
         lgkmcnt += localReads
@@ -800,13 +805,13 @@ class KernelWriter(metaclass=abc.ABCMeta):
         if kernel["ScheduleIterAlg"] == 3:
           for i in range (max(dataAtIterA,dataAtIterB)+1,iteration):
             localWrites += self.perIterLocalWriteCode[i].countType(Code.LocalWriteInst)
-        if kernel["ScheduleIterAlg"] == 3 and kernel["ScheduleLocalWrite"] > 0:
-          # current iteration localWrite count
-          localWrites += skipLocalWriteWaitcnt
-          # dataAtIter iteration localWrite count
-          if self.numItersPLR:
-            skipPreIterLW = self.perIterLocalWriteCanSkip[max(dataAtIterA,dataAtIterB)]
-            localWrites += skipPreIterLW
+          if kernel["ScheduleLocalWrite"] > 0:
+            # current iteration localWrite count
+            localWrites += skipLocalWriteWaitcnt
+            # dataAtIter iteration localWrite count
+            if self.numItersPLR:
+              skipPreIterLW = self.perIterLocalWriteCanSkip[max(dataAtIterA,dataAtIterB)]
+              localWrites += skipPreIterLW
         lgkmcnt += localWrites
       else:
         for item in list(iterCode.items()):
@@ -1046,57 +1051,74 @@ class KernelWriter(metaclass=abc.ABCMeta):
         kl.append(self.wait(kernel, tensorParametersA, tensorParametersB, -1, 0, -1, "4wait for local write"))
       if self.enable["Sync"]:
         kl.append(self.syncThreads(kernel))
+
+    # noloadloop without globalRead and localWrite
+    self.perIterGlobalReadCode = [ Code.Module() for i in range (kernel["LoopIters"]) ]
+    self.perIterLocalWriteCode = [ Code.Module() for i in range (kernel["LoopIters"]) ]
+    self.perIterLocalWriteCanSkip = [ 0 for i in range (kernel["LoopIters"]) ]
+
     for u in range(0, kernel["LoopIters"]):
       kl.append(self.comment("iter %u"%u))
-      plrIdx = (u+pflr) % (self.numVgprBuffer + 1)
-      plrPIdx = ((u+pflr) % (self.numVgprBuffer+1))
-      # pack[plrPIdx] = Code.Module()
+      plrIdx = (u+pflr) % (self.numVgprBuffer+1)
+      plrPIdx = (u+pflr) % (self.numVgprBuffer+1)
+      localReads = Code.Module()
+
       for iui in range(0,kernel["InnerUnroll"]):
         if self.enable["LocalRead"]:
           if u < kernel["LoopIters"]/self.numIterPerCoalescedReadA - self.numItersPLR:
             if iui*self.numReadsIterCoalescedA < kernel["InnerUnroll"]:
-              kl.append(self.comment("local read a"))
+              localReads.addText(self.comment("local read a"))
               localReadCodeA, packCodeA = self.localReadDo(kernel, plrIdx*self.numIterPerCoalescedReadA, iui*self.numReadsIterCoalescedA, 0, tensorParametersA)
-              kl.append(localReadCodeA)
+              localReads.addCode(localReadCodeA)
               pack[plrPIdx].addCode(packCodeA)
+              localReads.addText(self.comment("local read b"))
           if u < kernel["LoopIters"]/self.numIterPerCoalescedReadB - self.numItersPLR:
             if iui*self.numReadsIterCoalescedB < kernel["InnerUnroll"]:
-              kl.append(self.comment("local read b"))
               localReadCodeB, packCodeB = self.localReadDo(kernel, plrIdx*self.numIterPerCoalescedReadB, iui*self.numReadsIterCoalescedB, 0, tensorParametersB)
-              kl.append(localReadCodeB)
+              localReads.addCode(localReadCodeB)
               pack[plrPIdx].addCode(packCodeB)
           if u < kernel["LoopIters"]/self.numIterPerCoalescedReadA - self.numItersPLR:
             if iui*self.numReadsIterCoalescedA < kernel["InnerUnroll"]:
-              kl.append(self.comment("local read inc a"))
-              kl.append(self.localReadInc(kernel, iui, tensorParametersA))
+              localReads.addText(self.comment("local read increment a"))
+              localReads.addText(self.localReadInc(kernel, iui, tensorParametersA))
           if u < kernel["LoopIters"]/self.numIterPerCoalescedReadB - self.numItersPLR:
             if iui*self.numReadsIterCoalescedB < kernel["InnerUnroll"]:
-              kl.append(self.comment("local read inc b"))
-              kl.append(self.localReadInc(kernel, iui, tensorParametersB))
+              localReads.addText(self.comment("local read increment b"))
+              localReads.addText(self.localReadInc(kernel, iui, tensorParametersB))
+
+      pointerCode = Code.Module()
+      waitCode = Code.Module()  # may be overwritten (not added to) below
+      macIterCode = Code.Module()
+      waitLWCode = Code.Module()
+      syncCode = Code.Module()
+
       if self.enable["Wait"]:
         dataAtIter = u - self.numItersPLR
         numReadsIter = min(u+1,kernel["LoopIters"] - self.numItersPLR)
         skipReadsIter = numReadsIter - dataAtIter - 1
-        kl.append(self.wait(kernel, tensorParametersA, tensorParametersB, -1, -1, \
+        waitCode = self.wait(kernel, tensorParametersA, tensorParametersB, -1, -1, \
             skipReadsIter, \
-            "7wait for local read"))
+            "7wait for local read")
       luIdx = (u) % (self.numVgprBuffer+1) # local to use for MACs
       pIdx = (u) % (self.numVgprBuffer+1) # local to use for MACs
-      if kernel["EnableMatrixInstruction"]:
-        kl.append(pack[pIdx])
-        for item in list(pack[pIdx].items()):
-          if item.tempVgpr != None:
-            self.vgprPool.checkIn(item.tempVgpr)
-            item.tempVgpr = None
-        pack[pIdx] = Code.Module()
       if self.enable["MAC"]:
         if kernel["EnableMatrixInstruction"]:
-          kl.append(self.mfmaIter(kernel, luIdx, kernel["InnerUnroll"]))
+          macIterCode.addCode(self.mfmaIter(kernel, luIdx, kernel["InnerUnroll"]))
         else:
-          kl.append(self.macIter(kernel, luIdx, kernel["InnerUnroll"], useMacro=not isOptNLL ))
+          macIterCode.addCode(self.macIter(kernel, luIdx, kernel["InnerUnroll"], True ))
+
+      subIterCode = self.makeSubIterSchedule(kernel, localReads, \
+                      u, pointerCode, waitCode, macIterCode, waitLWCode, syncCode, pack[pIdx])
+      kl.append(subIterCode)
+      for item in list(pack[pIdx].items()):
+        if item.tempVgpr != None:
+          self.vgprPool.checkIn(item.tempVgpr)
+          item.tempVgpr = None
+      pack[pIdx] = Code.Module()
     if self.enable["executeToLoopEnd"] and isOptNLL:
       kl.append(self.functionEnd(kernel, False))
     kl.append(self.closeSumAtLeastUnroll(kernel, prefetch=False, isOptNLL=isOptNLL))
+
     return kl
 
   ##############################################################################
