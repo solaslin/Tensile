@@ -7147,14 +7147,17 @@ class KernelWriterAssembly(KernelWriter):
           if kernel["UnrollMajorLDS%s" % tP["tensorChar"]]:
             tP["localReadOffset"] += kernel["LocalSplitU"] * kernel["MatrixInstK"] * max(self.numReadsIterCoalescedA,self.numReadsIterCoalescedB)
           else:
-            if kernel["MatrixInstB"] != 1:
-              tP["localReadOffset"] += kernel["LocalSplitU"] * (kernel["MacroTile%u"%tP["tensorIdx"]] + LdsPad) * kernel["MatrixInstK"] * (self.numReadsIterCoalescedA if tc == "A" else self.numReadsIterCoalescedB)
-            else:
-              if tc == "A":
+            if tc == "A":
+              if kernel["MatrixInstB"] != 1 or self.lrvwA == self.lrvwB:
+                tP["localReadOffset"] += kernel["LocalSplitU"] * (kernel["MacroTile%u"%tP["tensorIdx"]] + LdsPad) * kernel["MatrixInstK"] * self.numReadsIterCoalescedA
+              else:
                 if (self.localReadDoCntA)%(kernel["LocalReadVectorWidth"]//self.lrvwA):
                   tP["localReadOffset"] += kernel["LocalSplitU"] * (kernel["MacroTile%u"%tP["tensorIdx"]] + LdsPad) * self.lrvwA
                 else:
                   tP["localReadOffset"] += kernel["LocalSplitU"] * (kernel["MacroTile%u"%tP["tensorIdx"]] + LdsPad) * (kernel["MatrixInstK"]*kernel["LocalReadVectorWidth"]//self.lrvwA-self.lrvwA*(kernel["LocalReadVectorWidth"]//self.lrvwA-1))
+            else:
+              if kernel["MatrixInstB"] != 1 or self.lrvwA == self.lrvwB:
+                tP["localReadOffset"] += kernel["LocalSplitU"] * (kernel["MacroTile%u"%tP["tensorIdx"]] + LdsPad) * kernel["MatrixInstK"] * self.numReadsIterCoalescedB
               else:
                 if (self.localReadDoCntB)%(kernel["LocalReadVectorWidth"]//self.lrvwB):
                   tP["localReadOffset"] += kernel["LocalSplitU"] * (kernel["MacroTile%u"%tP["tensorIdx"]] + LdsPad) * self.lrvwB
@@ -7278,7 +7281,7 @@ class KernelWriterAssembly(KernelWriter):
     needPack = blockWidth < 1
     pack     = Code.Module("pack%s_I%s"%(tc,iui))
     if needPack:
-      tmpVgprIdx = self.vgprPool.checkOut(self.numVgprValuAPerBlock if tc == 'A' else self.numVgprValuBPerBlock)
+      tmpVgprIdx = self.vgprPool.checkOut(self.numVgprValuAPerBlock*self.numReadsIterCoalescedA if tc == 'A' else self.numVgprValuBPerBlock*self.numReadsIterCoalescedB)
       pack.addTempVgpr(tmpVgprIdx)
 
     valufIdx = 0
