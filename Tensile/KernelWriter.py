@@ -1320,7 +1320,7 @@ class KernelWriter(metaclass=abc.ABCMeta):
       finalLoop = not expand or lc==loopCopies-1
       kl.append(self.comment3("Unroll Loop %u/%u - Begin" % (lc+1, loopCopies)))
       kl.append(self.openLoopCopy(kernel, lc))
-      if kernel["PrefetchGlobalRead"] and not self.numItersPLR:
+      if kernel["PrefetchGlobalRead"] and not self.numItersPLR and not kernel["ScheduleIterAlg"] == 2:
         if self.enable["Wait"]:
           kl.append(self.wait(kernel, tensorParametersA, tensorParametersB, 1, 0, -1, \
               "1wait for local write"))
@@ -1471,7 +1471,7 @@ class KernelWriter(metaclass=abc.ABCMeta):
         syncCode = Code.Module()
         # put barrier at localWriteEndIter+1
         if kernel["PrefetchGlobalRead"]:
-          if u == localWriteEndIter+1:
+          if u == localWriteEndIter+1 or (u == (localWriteEndIter+1)%kernel["LoopIters"] and kernel["ScheduleIterAlg"] == 2):
             if self.enable["Wait"]:
               waitLWCode.addCode(self.wait(kernel, tensorParametersA, tensorParametersB, -1, 0, -1, \
                   "3wait for local write"))
