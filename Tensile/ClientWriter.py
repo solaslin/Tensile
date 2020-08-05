@@ -642,6 +642,7 @@ def writeClientConfig(forBenchmark, solutions, problemSizes, stepName, stepBaseD
         param("perf-read-efficiency",     globalParameters["PerfModelReadEfficiency"])
         param("csv-export-extra-cols",    globalParameters["CSVExportWinner"])
         param("csv-merge-same-problems",  globalParameters["CSVMergeSameProblemID"])
+        param("PrintWinnersOnly",         globalParameters["PrintWinnersOnly"])
 
 
 

@@ -94,12 +94,7 @@ namespace Tensile
 
             m_firstRow = false;
 
-            readRowToMap(m_currentRow, outMap);
-
-            if(m_stack.empty())
-                m_currentRow.clear();
-            else
-                m_currentRow = m_stack.back();
+            outMap = m_currentRow;
         }
 
         void CSVStackFile::writeRow(std::unordered_map<std::string, std::string> const& row)

@@ -48,11 +48,13 @@ namespace Tensile
             LogReporter(LogLevel                           level,
                         std::initializer_list<const char*> keys,
                         std::ostream&                      stream,
-                        bool                               dumpTensors)
+                        bool                               dumpTensors,
+                        bool                               PrintWinnersOnly)
                 : m_level(level)
                 , m_stream(stream)
                 , m_csvOutput(stream)
                 , m_dumpTensors(dumpTensors)
+                , m_PrintWinnersOnly(PrintWinnersOnly)
             {
                 for(auto const& key : keys)
                     m_csvOutput.setHeaderForKey(key, key);
@@ -61,11 +63,13 @@ namespace Tensile
             LogReporter(LogLevel                           level,
                         std::initializer_list<std::string> keys,
                         std::ostream&                      stream,
-                        bool                               dumpTensors)
+                        bool                               dumpTensors,
+                        bool                               PrintWinnersOnly)
                 : m_level(level)
                 , m_stream(stream)
                 , m_csvOutput(stream)
                 , m_dumpTensors(dumpTensors)
+                , m_PrintWinnersOnly(PrintWinnersOnly)
             {
                 for(auto const& key : keys)
                     m_csvOutput.setHeaderForKey(key, key);
@@ -74,12 +78,14 @@ namespace Tensile
             LogReporter(LogLevel                           level,
                         std::initializer_list<std::string> keys,
                         std::shared_ptr<std::ostream>      stream,
-                        bool                               dumpTensors)
+                        bool                               dumpTensors,
+                        bool                               PrintWinnersOnly)
                 : m_level(level)
                 , m_stream(*stream)
                 , m_ownedStream(stream)
                 , m_csvOutput(stream)
                 , m_dumpTensors(dumpTensors)
+                , m_PrintWinnersOnly(PrintWinnersOnly)
             {
                 for(auto const& key : keys)
                     m_csvOutput.setHeaderForKey(key, key);
@@ -90,6 +96,7 @@ namespace Tensile
                                                         Stream&                  stream)
             {
                 bool dumpTensors = args["dump-tensors"].as<bool>();
+                bool PrintWinnersOnly = args["PrintWinnersOnly"].as<bool>();
                 using namespace ResultKey;
                 auto logLevel = args["log-level"].as<LogLevel>();
                 std::cout << "Log level: " << logLevel << std::endl;
@@ -99,10 +106,10 @@ namespace Tensile
                                                                      SolutionProgress,
                                                                      OperationIdentifier,
                                                                      ProblemSizes,
-                                                                     SolutionName,
                                                                      Validation,
                                                                      TimeUS,
                                                                      SpeedGFlops,
+                                                                     SolutionName,
                                                                      Empty,
                                                                      TotalGranularity,
                                                                      TilesPerCu,
@@ -121,7 +128,8 @@ namespace Tensile
                                                                      HardwareSampleCount,
                                                                      EnqueueTime},
                                                                     stream,
-                                                                    dumpTensors));
+                                                                    dumpTensors,
+                                                                    PrintWinnersOnly));
             }
 
             static std::shared_ptr<LogReporter> Default(po::variables_map const& args)
@@ -250,6 +258,7 @@ namespace Tensile
             virtual void preProblem(ContractionProblem const& problem) override
             {
                 m_csvOutput.push();
+                m_winner = 0;
             }
 
             virtual void preSolution(ContractionSolution const& solution) override
@@ -260,14 +269,26 @@ namespace Tensile
 
             virtual void postSolution() override
             {
-                if(m_rowLevel <= m_level)
+                std::unordered_map<std::string,std::string> curRow;
+                m_csvOutput.readCurrentRowToMap(curRow);
+                uint64_t currentGflops = std::stoull(curRow[ResultKey::SpeedGFlops]);
+                bool validation = curRow[ResultKey::Validation] == "PASSED" || curRow[ResultKey::Validation] == "NO_CHECK";
+                if(m_rowLevel <= m_level and (!m_PrintWinnersOnly or m_winner < currentGflops or !validation))
+                {
                     m_csvOutput.writeCurrentRow();
+                    if(validation)
+                    {
+                        m_winner = currentGflops;
+                    }
+                }
                 m_csvOutput.pop();
             }
 
             virtual void postProblem() override
             {
                 m_csvOutput.pop();
+                if(m_rowLevel <= m_level)
+                    printf("++++++++++++++++++++++++\n");
             }
 
             virtual void finalizeReport() override {}
@@ -281,6 +302,8 @@ namespace Tensile
             bool m_firstRun    = true;
             bool m_inSolution  = false;
             bool m_dumpTensors = false;
+            bool m_PrintWinnersOnly = false;
+            uint64_t m_winner = 0;
 
             LogLevel m_rowLevel;
 
