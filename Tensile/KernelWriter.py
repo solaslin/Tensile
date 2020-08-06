@@ -557,11 +557,10 @@ class KernelWriter(metaclass=abc.ABCMeta):
       # we need 1 vector A and 1 vector B for first mfma
       # then we prepare remaining A, then remaining B
       ####
-      packAB = Code.Module()
       instPerPack = 1 if kernel["ProblemType"]["DataType"].isBFloat16() else 2
-      packINtems = [ [] for j in range(max(self.numReadsIterCoalescedA,self.numReadsIterCoalescedB)) ]
       packItems = []
       for iui in range(kernel["InnerUnroll"]):
+        packINtems = [ [] for j in range(max(self.numReadsIterCoalescedA,self.numReadsIterCoalescedB)) ]
         packA = packCode.findNamedItem("packA_I%s"%(iui))
         packB = packCode.findNamedItem("packB_I%s"%(iui))
         # In case localReadDo not generate pack Module
@@ -589,8 +588,8 @@ class KernelWriter(metaclass=abc.ABCMeta):
           for j in range(self.numReadsIterCoalescedB):
             for n in range(instPerPack):
               packINtems[j].append(packBItems.pop(0))
-      for j in range(max(self.numReadsIterCoalescedA,self.numReadsIterCoalescedB)):
-        packItems += packINtems[j]
+        for j in range(max(self.numReadsIterCoalescedA,self.numReadsIterCoalescedB)):
+          packItems += packINtems.pop(0)
 
       # remove s_nop for packing
       # we will add s_nop if needed
