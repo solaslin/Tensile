@@ -2323,6 +2323,24 @@ class Solution:
 
     state["WorkGroupMapping" ] = abs(state["WorkGroupMapping"])
 
+    # avoid bug somehow related to GlobalSplitU + Persistent
+    # avoid bug related to WGM<0
+    if state["PersistentKernel"] and (\
+            (state["KernelLanguage"] == "Assembly" and state["GlobalSplitU"] != 1) or \
+            (state["KernelLanguage"] == "Assembly" and state["WorkGroupMapping"] < 0) ):
+      state["PersistentKernel"] = 0
+
+    if state["PersistentKernelAlongBatch"] and (\
+            (state["PersistentKernel"] == 0) or \
+            (state["KernelLanguage"] == "Source" and state["GlobalSplitU"] != 1) ):
+      # warn("PersistentKernelAlongBatch requires PersistentKernel != 0, forcing PersistentKernelAlongBatch = False")
+      # warn("PersistentKernelAlongBatch not support GSU on HIP, forcing PersistentKernelAlongBatch = False")
+      state["PersistentKernelAlongBatch"] = False
+
+    if state["PrefetchAcrossPersistent"] and (state["PersistentKernel"] == 0):
+      # warn("PrefetchAcrossPersistent requires PersistentKernel != 0, forcing PrefetchAcrossPersistent = False")
+      state["PrefetchAcrossPersistent"] = False
+
     problemType = state["ProblemType"]
     if not problemType["UseInitialStridesAB"]:
       for (tc) in ('A','B'):
@@ -2404,6 +2422,9 @@ class Solution:
       if not (bufferLoad and state["PrefetchGlobalRead"] == 1):
         state["ExpandPointerSwap"] = 0
       if state["PrefetchGlobalRead"] == 2:
+        state["ExpandPointerSwap"] = 0
+      # EPS not supported with PAP yet
+      if state["PrefetchAcrossPersistent"]:
         state["ExpandPointerSwap"] = 0
 
     #print("PackedC0IdxChars", state["PackedC0IdxChars"])
@@ -2914,9 +2935,6 @@ class Solution:
       if not state["EnableMatrixInstruction"]:
         reject(state, "storeRemap only support MaxtrixInstruction kernel")
         return
-      if state["PersistentKernel"]:
-        reject(state, "storeRemap doesn't support persist kernel yet")
-        return
       if (state["GlobalSplitU"] > 1) and (state["_GlobalAccumulation"] != 2):
         reject(state, "storeRemap doesn't support GlobalSplitU yet, except GSU algorithm 2")
         return
@@ -3267,15 +3285,6 @@ class Solution:
           reject(state, "asm ZeroPad requires GlobalLoadVectorWidth==1")
         if not bufferLoad:
           reject(state, "asm ZeroPad requires BufferLoad")
-
-    # avoid bug somehow related to GlobalSplitU + Persistent
-    # avoid bug related to WGM<0
-    # avoid bug somehow related to HPA + Persistent
-    if state["PersistentKernel"] and (\
-            (state["KernelLanguage"] == "Assembly" and state["GlobalSplitU"] != 1) or \
-            (state["KernelLanguage"] == "Assembly" and state["WorkGroupMapping"] < 0) or \
-            (state["KernelLanguage"] == "Assembly" and problemType["HighPrecisionAccumulate"]) ):
-      state["PersistentKernel"] = 0
 
     if state["MagicDivAlg"] == 2 and globalParameters["NewClient"] != 2:
       warn("Legacy client does not support MagicDivAlg==2, forcing MagicDivAlg=1")
