@@ -645,7 +645,7 @@ class KernelWriter(metaclass=abc.ABCMeta):
       ####################################
       # Global Read Addresses
       ####################################
-      kl.append(self.comment3("Begin setupNewTile"))
+      kl.append(self.comment3("Begin setupNewTile, isPap=%s") % isPap)
 
       # work-group assignments
       kl.append(self.comment("global read addresses: work-group"))
@@ -811,7 +811,7 @@ class KernelWriter(metaclass=abc.ABCMeta):
       if self.enable["GlobalReadInc"]:
         kl.append(self.globalReadIncrementAB(kernel, self.unrollIdx, pfi))
 
-    kl.append(self.comment3("End setupNewTile"))
+    kl.append(self.comment3("End setupNewTile, isPap=%s") % isPap)
 
     return kl
 
@@ -825,11 +825,7 @@ class KernelWriter(metaclass=abc.ABCMeta):
     kl = []
     pflr     = self.numItersPLR
 
-    kl.append(self.comment3("%s NoLoadLoop - Begin") % "Opt" if isOptNLL else "")
-    if self.prefetchAcrossPersistent:
-      kl.append(self.openPrefetchAcrossPersistent(kernel))
-      kl += self.setupNewTile(kernel, self.tPA, self.tPB, True)
-      kl.append(self.closePrefetchAcrossPersistent(kernel))
+    kl.append(self.comment3("%s NoLoadLoop - Begin") % ("Opt." if isOptNLL else "Ord."))
 
     kl.append(self.openSumAtLeastUnroll(kernel, prefetch=False, isPap=False, \
         isOptNLL=isOptNLL))
@@ -950,12 +946,12 @@ class KernelWriter(metaclass=abc.ABCMeta):
     if self.prefetchAcrossPersistent:
       # first prefetch is outside persistent loop, subsequent prefetch will
       # be integrated into no-load-loop
-      kl += self.setupNewTile(kernel, tensorParametersA, tensorParametersB, False)
+      kl += self.setupNewTile(kernel, tensorParametersA, tensorParametersB, isPap=False)
       kl.append(self.openPersistentLoop(kernel))
     else:
       # prefetch is inside persistent loop
       kl.append(self.openPersistentLoop(kernel))
-      kl += self.setupNewTile(kernel, tensorParametersA, tensorParametersB, False)
+      kl += self.setupNewTile(kernel, tensorParametersA, tensorParametersB, isPap=False)
 
     pack = [ Code.Module() for i in range (self.numItersPLR+1) ]
 
@@ -1412,6 +1408,12 @@ class KernelWriter(metaclass=abc.ABCMeta):
     # execute the NLL inside each unroll iteration not just once at the end.
     if kernel["PrefetchGlobalRead"]:
       if not kernel["SuppressNoLoadLoop"]:
+        
+        if self.prefetchAcrossPersistent:
+          kl.append(self.openPrefetchAcrossPersistent(kernel))
+          kl += self.setupNewTile(kernel, self.tPA, self.tPB, isPap=True)
+          kl.append(self.closePrefetchAcrossPersistent(kernel))
+          
         if kernel["KernelLanguage"] == "Assembly" and kernel["OptNoLoadLoop"] and \
            kernel["BufferLoad"] and kernel["BufferStore"] and self.doShadowInit and \
            kernel["LocalSplitU"]==1 and kernel["GlobalSplitU"] == 1 and \
