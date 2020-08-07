@@ -943,6 +943,10 @@ class KernelWriter(metaclass=abc.ABCMeta):
         # can't do shadow initC with multiple summation since this resets the ValuC counters
         # on each unroll iteration.
         self.doShadowInit = 1 # 1 is just store setup
+
+    # in HPA mode, can do the alpha, beta conversion f16->f32 only once
+    kl.append( self.checkAlphaBetaForHPA(kernel))
+
     if self.prefetchAcrossPersistent:
       # first prefetch is outside persistent loop, subsequent prefetch will
       # be integrated into no-load-loop
@@ -1408,12 +1412,12 @@ class KernelWriter(metaclass=abc.ABCMeta):
     # execute the NLL inside each unroll iteration not just once at the end.
     if kernel["PrefetchGlobalRead"]:
       if not kernel["SuppressNoLoadLoop"]:
-        
+
         if self.prefetchAcrossPersistent:
           kl.append(self.openPrefetchAcrossPersistent(kernel))
           kl += self.setupNewTile(kernel, self.tPA, self.tPB, isPap=True)
           kl.append(self.closePrefetchAcrossPersistent(kernel))
-          
+
         if kernel["KernelLanguage"] == "Assembly" and kernel["OptNoLoadLoop"] and \
            kernel["BufferLoad"] and kernel["BufferStore"] and self.doShadowInit and \
            kernel["LocalSplitU"]==1 and kernel["GlobalSplitU"] == 1 and \
@@ -2520,6 +2524,13 @@ class KernelWriter(metaclass=abc.ABCMeta):
   ##############################################################################
   @abc.abstractmethod
   def endSummation(self, kernel):
+    return ""
+
+  ##############################################################################
+  # Convert Alpha, Beta from F16 to F32 for HPA
+  ##############################################################################
+  @abc.abstractmethod
+  def checkAlphaBetaForHPA(self, kernel):
     return ""
 
   ##############################################################################

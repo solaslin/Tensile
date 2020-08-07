@@ -2884,9 +2884,6 @@ class Solution:
       if not state["EnableMatrixInstruction"]:
         reject(state, "storeRemap only support MaxtrixInstruction kernel")
         return
-      if state["PersistentKernel"]:
-        reject(state, "storeRemap doesn't support persist kernel yet")
-        return
       if state["GlobalSplitU"] > 1:
         reject(state, "storeRemap doesn't support GlobalSplitU yet")
         return
@@ -3238,12 +3235,14 @@ class Solution:
 
     # avoid bug somehow related to GlobalSplitU + Persistent
     # avoid bug related to WGM<0
-    # avoid bug somehow related to HPA + Persistent
     if state["PersistentKernel"] and (\
             (state["KernelLanguage"] == "Assembly" and state["GlobalSplitU"] != 1) or \
-            (state["KernelLanguage"] == "Assembly" and state["WorkGroupMapping"] < 0) or \
-            (state["KernelLanguage"] == "Assembly" and problemType["HighPrecisionAccumulate"]) ):
+            (state["KernelLanguage"] == "Assembly" and state["WorkGroupMapping"] < 0) ):
       state["PersistentKernel"] = 0
+
+    if state["PersistentKernelAlongBatch"] and (state["PersistentKernel"] == 0):
+      # warn("PersistentKernelAlongBatch requires PersistentKernel != 0, forcing PersistentKernelAlongBatch = False")
+      state["PersistentKernelAlongBatch"] = False
 
     if state["MagicDivAlg"] == 2 and globalParameters["NewClient"] != 2:
       warn("Legacy client does not support MagicDivAlg==2, forcing MagicDivAlg=1")
