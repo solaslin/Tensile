@@ -2251,6 +2251,7 @@ class Solution:
       state["InnerUnroll"] = state["DepthU"] // state["MatrixInstK"]
       state["PrefetchLocalRead"] = 1
       state["ExpandPointerSwap"] = 1
+      state["1LDSBuffer"] = 1
 
     if state["DisableVgprOverlapping"] is True and state["EnableMatrixInstruction"] is not True:
       reject(state, "Non-MI kernels are already non-overlapping in pre-allocated registers")
@@ -2876,8 +2877,7 @@ class Solution:
 
 
     if state["1LDSBuffer"] == -1:
-      if ldsNumElementsAB * state["ProblemType"]["DataType"].numBytes() > globalParameters["MaxLDS"] or \
-          state["ScheduleIterAlg"] == 2:
+      if ldsNumElementsAB * state["ProblemType"]["DataType"].numBytes() > globalParameters["MaxLDS"]:
         state["1LDSBuffer"] = 1
       else:
         state["1LDSBuffer"] = 0
