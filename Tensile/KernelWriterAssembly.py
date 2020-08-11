@@ -5172,11 +5172,16 @@ class KernelWriterAssembly(KernelWriter):
       if self.prefetchAcrossPersistent0:
         loopCounter = "TailLoopCounter"
       endCounter = 0
-    elif kernel["PrefetchGlobalRead"]:
+    elif kernel["PrefetchGlobalRead"] == 1:
       if kernel["SuppressNoLoadLoop"]:
         endCounter =  0
       else:
         endCounter = 1
+    elif kernel["PrefetchGlobalRead"] == 2:
+      if kernel["SuppressNoLoadLoop"]:
+        endCounter =  1
+      else:
+        endCounter = 2
     else:
       endCounter =  0
 
@@ -5339,8 +5344,10 @@ class KernelWriterAssembly(KernelWriter):
         # So can do one more iteration (endCounter==0) in the main unroll loop, and adjust the pointer
         # increments appropriately.
         # Also sum idx other than unroll always compare against 0 (there is no PGR to account for)
-        if kernel["PrefetchGlobalRead"] and not kernel["SuppressNoLoadLoop"] and loopIdx == self.unrollIdx:
+        if kernel["PrefetchGlobalRead"] == 1 and not kernel["SuppressNoLoadLoop"] and loopIdx == self.unrollIdx:
           endCounter = 1
+        elif kernel["PrefetchGlobalRead"] == 2 and not kernel["SuppressNoLoadLoop"] and loopIdx == self.unrollIdx:
+          endCounter = 2
         else:
           endCounter = 0
 
@@ -11311,7 +11318,7 @@ class KernelWriterAssembly(KernelWriter):
       kStr = ""
       if self.archCaps["SeparateVscnt"]:
         kStr += inst("s_waitcnt_lgkmcnt", "null", "0", "extra navi wait")
-      elif self.archCaps["Waitcnt0Disabled"] and not kernel["ScheduleIterAlg"] == 2:
+      elif self.archCaps["Waitcnt0Disabled"] and not kernel["ScheduleIterAlg"] == 2 and not kernel["PrefetchGlobalRead"] == 2:
         kStr += inst("s_waitcnt", "lgkmcnt(0) & vmcnt(0)", "force waitcnt0" )
 
       kStr += self.indent + self.syncStr + " //" + comment + self.endLine
