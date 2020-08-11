@@ -306,7 +306,7 @@ validParameters = {
     "WaveSeparateGlobalReadB":    [ 0, 1 ],
 
     # prefetch / double-buffer reads from global memory -> vgprs -> lds. Requires 2X LDS space, and VGPRs for buffering data on way into LDS
-    "PrefetchGlobalRead":         [ False, True ],
+    "PrefetchGlobalRead":         [ False, True, 2 ],
 
     # number of iteration prefetch local reads from lds to VGPRs buffer = PLR % LoopIter
     # number of VGPRs buffer = min(PLR,LoopIters)
