@@ -700,6 +700,25 @@ class KernelWriterAssembly(KernelWriter):
     else:
       raise ValueError("unexpected tensorChar='%s' in stride function"%tc)
 
+  ########################################
+  # Format Instruction
+  #######################################
+  def inst(*args):
+    # exclude the last parameter (before comment)
+    # if it is empty (needed for clang++ assembler)
+    if len(args) > 2 and args[len(args)-2] == "":
+      params = args[0:len(args)-2]
+    else:
+      params = args[0:len(args)-1]
+    comment = args[len(args)-1]
+    formatting = "%s"
+    if len(params) > 1:
+      formatting += " %s"
+    for _ in range(0, len(params)-2):
+      formatting += ", %s"
+    instStr = formatting % (params)
+    line = "%-50s // %s\n" % (instStr, comment)
+    return line
 
   ########################################
   # Get Label
@@ -5243,6 +5262,14 @@ class KernelWriterAssembly(KernelWriter):
     else: # not tailloop:
 
       if loopIdx == self.unrollIdx:
+        if kernel["PrefetchGlobalRead"] == 2:
+          kStr += inst("s_cmp_eq_u32", \
+              loopCounter, \
+              hex(endCounter-1), \
+              "LoopCounter%s < EndCounter"%(loopChar) )
+          toPGR1 = self.getLabelNum("toPGR1")
+          kStr += inst("s_cbranch_scc1 label_%04u"%toPGR1, "PGR=2 but only 1 loop, toPGR1")
+
         if self.unrollIncIsDepthU:
           kStr += inst("s_cmp_ge_u32", \
               loopCounter, \

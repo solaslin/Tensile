@@ -1122,6 +1122,12 @@ class KernelWriter(metaclass=abc.ABCMeta):
 
     kl.append(self.comment3(" NoGlobalLoadLoop - Begin"))
 
+    if not self.numItersPLR:
+      if self.enable["Wait"]:
+        kl.append(self.wait(kernel, tensorParametersA, tensorParametersB, -1, 0, -1, "4wait for local write"))
+      if self.enable["Sync"]:
+        kl.append(self.syncThreads(kernel))
+
     # noloadloop without globalRead and localWrite
     self.perIterGlobalReadCode = [ Code.Module() for i in range (kernel["LoopIters"]) ]
     self.perIterLocalWriteCode = self.perIterLocalWriteCode2
@@ -1132,7 +1138,19 @@ class KernelWriter(metaclass=abc.ABCMeta):
       plrIdx = (u+pflr) % (self.numVgprBuffer+1) % kernel["LoopIters"]
       plrPIdx = (u+pflr) % (self.numVgprBuffer+1) % kernel["LoopIters"]
       localReads = Code.Module()
-      isResetLroIter = u == localWriteEndIter
+      isResetLroIter = (u == localWriteEndIter)
+      isSwapAndResetLwoIter = isResetLroIter
+      isSwapLroIter = isResetLroIter
+      if kernel["ScheduleIterAlg"] == 3:
+        isSwapLroIter = (u == self.nextLoopLRMfmaIndex//(kernel["MIWaveTile"][0] * kernel["MIWaveTile"][1] * kernel["InnerUnroll"]))
+        isSwapAndResetLwoIter = (u == self.lwEndMfmaIndex//(kernel["MIWaveTile"][0] * kernel["MIWaveTile"][1] * kernel["InnerUnroll"]))
+      extraComment = ""
+      if isResetLroIter:
+        extraComment += " (reset local read pointers iteration) "
+      if isSwapAndResetLwoIter:
+        extraComment += " (swap and reset local write pointers iteration) "
+      if isSwapLroIter:
+        extraComment += " (swap local read pointers iteration) "
 
       for iui in range(0,kernel["InnerUnroll"]):
         if self.enable["LocalRead"]:
@@ -1158,7 +1176,8 @@ class KernelWriter(metaclass=abc.ABCMeta):
                 localReads.addText(self.comment("local read increment b"))
                 localReads.addText(self.localReadInc(kernel, iui, tensorParametersB))
 
-      pointerCode = Code.Module()
+      pointerLWCode = Code.Module()
+      pointerLRCode = Code.Module()
       waitCode = Code.Module()  # may be overwritten (not added to) below
       macIterCode = Code.Module()
       waitLWCode = Code.Module()
@@ -1172,28 +1191,31 @@ class KernelWriter(metaclass=abc.ABCMeta):
           if self.enable["Sync"]:
             syncCode.addCode(self.syncThreads(kernel))
 
-      if isResetLroIter: # ResetLroIter
+      if isSwapAndResetLwoIter: # ResetLroIter
         if kernel["PrefetchGlobalRead"]:
           if self.enable["LocalWrite"]:
             # local write for next iter, used to have local writes here
-            pointerCode.addText(self.comment("local write swap offsets a"))
-            pointerCode.addText(self.localWriteSwapOffsets(kernel, tensorParametersA))
-            pointerCode.addText(self.comment("local write swap offsets b"))
-            pointerCode.addText(self.localWriteSwapOffsets(kernel, tensorParametersB))
-            pointerCode.addText(self.localWriteInitPointers(kernel, tensorParametersA))
-            pointerCode.addText(self.localWriteInitPointers(kernel, tensorParametersB))
+            pointerLWCode.addText(self.comment("local write swap offsets a"))
+            pointerLWCode.addText(self.localWriteSwapOffsets(kernel, tensorParametersA))
+            pointerLWCode.addText(self.comment("local write swap offsets b"))
+            pointerLWCode.addText(self.localWriteSwapOffsets(kernel, tensorParametersB))
+            pointerLWCode.addText(self.localWriteInitPointers(kernel, tensorParametersA))
+            pointerLWCode.addText(self.localWriteInitPointers(kernel, tensorParametersB))
 
+      if isSwapLroIter: # ResetLroIter
+        if kernel["PrefetchGlobalRead"]:
+          if self.enable["LocalRead"]:
+            # Swap, reset, or increment the LRO:
+            pointerLRCode.addText(self.comment("local read swap offsets a"))
+            pointerLRCode.addText(self.localReadSwapOffsets(kernel, kernel["ExpandPointerSwap"], tensorParametersA))
+            pointerLRCode.addText(self.comment("local read swap offsets b"))
+            pointerLRCode.addText(self.localReadSwapOffsets(kernel, kernel["ExpandPointerSwap"], tensorParametersB))
+      if isResetLroIter: # ResetLroIter
         if self.enable["LocalRead"]:
-          # Swap, reset, or increment the LRO:
-          if kernel["PrefetchGlobalRead"]:
-            pointerCode.addText(self.comment("local read swap offsets a"))
-            pointerCode.addText(self.localReadSwapOffsets(kernel, kernel["ExpandPointerSwap"], tensorParametersA))
-            pointerCode.addText(self.comment("local read swap offsets b"))
-            pointerCode.addText(self.localReadSwapOffsets(kernel, kernel["ExpandPointerSwap"], tensorParametersB))
-          pointerCode.addText(self.comment("local read init pointers a"))
-          pointerCode.addText(self.localReadInitPointers(kernel, tensorParametersA))
-          pointerCode.addText(self.comment("local read init pointers b"))
-          pointerCode.addText(self.localReadInitPointers(kernel, tensorParametersB))
+          pointerLRCode.addText(self.comment("local read init pointers a"))
+          pointerLRCode.addText(self.localReadInitPointers(kernel, tensorParametersA))
+          pointerLRCode.addText(self.comment("local read init pointers b"))
+          pointerLRCode.addText(self.localReadInitPointers(kernel, tensorParametersB))
 
       if self.enable["Wait"]:
         dataAtIter = u - self.numItersPLR
@@ -1211,13 +1233,16 @@ class KernelWriter(metaclass=abc.ABCMeta):
           macIterCode.addCode(self.macIter(kernel, luIdx, kernel["InnerUnroll"], True ))
 
       subIterCode = self.makeSubIterSchedule(kernel, localReads, \
-                      u, pointerCode, waitCode, macIterCode, waitLWCode, syncCode, pack[pIdx])
+                      u, pointerLWCode, pointerLRCode, waitCode, macIterCode, waitLWCode, syncCode, pack[pIdx])
       kl.append(subIterCode)
       for item in list(pack[pIdx].items()):
         if item.tempVgpr != None:
           self.vgprPool.checkIn(item.tempVgpr)
           item.tempVgpr = None
       pack[pIdx] = Code.Module()
+
+    toPGR1 = self.getLabelNum("toPGR1")
+    kl.append("label_%04u:%s" % (toPGR1, self.endLine))
 
     return kl
 
@@ -1422,11 +1447,16 @@ class KernelWriter(metaclass=abc.ABCMeta):
         kl.append(self.localWriteInitPointers(kernel, tensorParametersB))
 
       if kernel["PrefetchGlobalRead"] == 2:
+        loopCounter = self.loopCounter(kernel, self.unrollIdx)
+        kl.append("s_cmp_eq_u32 %s %s // %s" %(loopCounter, hex(1), "PGR=2 but only 1 loop"))
+        skipPGR2 = self.getLabelNum("skipPGR2")
+        kl.append("s_cbranch_scc1 label_%04u // %s" %(skipPGR2, "PGR=2 but only 1 loop"))
         if self.enable["GlobalRead"]:
           kl.append(str(self.directToLdsM0Update(kernel, 0, tensorParametersA)))
           kl.append(str(self.globalReadDo(kernel, 0, tensorParametersA)))
           kl.append(str(self.directToLdsM0Update(kernel, 0, tensorParametersB)))
           kl.append(str(self.globalReadDo(kernel, 0, tensorParametersB)))
+        kl.append("label_%04u:%s" % (skipPGR2, self.endLine))
 
       # prefetch-local
       if self.numItersPLR:
