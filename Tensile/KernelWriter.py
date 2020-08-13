@@ -103,11 +103,7 @@ class KernelWriter(metaclass=abc.ABCMeta):
     # schedule of work for each local_read iteration:
     self.perIterGlobalReadCode = [ Code.Module() for i in range (kernel["LoopIters"]) ]
     self.perIterLocalWriteCode = [ Code.Module() for i in range (kernel["LoopIters"]) ]
-    if not hasattr(self, 'perIterLocalWriteCode2'):
-      self.perIterLocalWriteCode2 = [ Code.Module() for i in range (kernel["LoopIters"]) ]
-      needCopy = True
-    else:
-      needCopy = False
+    self.perIterLocalWriteCode2 = [ Code.Module() for i in range (kernel["LoopIters"]) ]
     self.perIterLocalWriteCanSkip = [ 0 for i in range (kernel["LoopIters"]) ]
     assert([item.name for item in self.globalReadIncrements.itemList] == ['globalReadIncrementA', 'globalReadIncrementB'])
 
@@ -209,7 +205,8 @@ class KernelWriter(metaclass=abc.ABCMeta):
       # Add all loads from middle as individual schedulable items
       if kernel["PrefetchGlobalRead"] == 2:
         itemsToSched =  []
-        prefetchGlobal = list(self.globalReadACode.middle.items()) + list(self.globalReadBCode.middle.items())
+        prefetchGlobal = list(self.globalReadACode.middle.items()) + \
+                         list(self.globalReadBCode.middle.items())
       else:
         itemsToSched =  list(self.globalReadACode.middle.items()) + \
                         list(self.globalReadBCode.middle.items())
@@ -223,7 +220,10 @@ class KernelWriter(metaclass=abc.ABCMeta):
         itemsToSched.append(Code.Module())
 
       if kernel["EnableMatrixInstruction"] and kernel["ScheduleIterAlg"] == 3:
-        self.grEndMfmaIndex = roundUp(readCnt/self.numGlobalReadInsPerMfma) - 1
+        if kernel["PrefetchGlobalRead"] == 2:
+          self.grEndMfmaIndex = roundUp(len(itemsToSched)/self.numGlobalReadInsPerMfma) - 1
+        else:
+          self.grEndMfmaIndex = roundUp(readCnt/self.numGlobalReadInsPerMfma) - 1
         if self.grEndMfmaIndex > self.lwEndMfmaIndex:
           firstStep = (numMfmaPerIter + (self.grEndMfmaIndex - self.lwEndMfmaIndex)) * self.numGlobalReadInsPerMfma
           self.grEndMfmaIndex = self.lwEndMfmaIndex
@@ -394,8 +394,7 @@ class KernelWriter(metaclass=abc.ABCMeta):
             imod.addCode(prefetchGlobal.pop(0))
             readsToWait = readsToWait + 1
           self.perIterLocalWriteCode[u].addCode(imod)
-          if needCopy:
-            self.perIterLocalWriteCode2[u].addCode(imod2)
+          self.perIterLocalWriteCode2[u].addCode(imod2)
         itemsToSched = itemsToSched[itemPerIter:]
 
       # should never run out of items to schedule
@@ -433,7 +432,7 @@ class KernelWriter(metaclass=abc.ABCMeta):
       waitLWCode = Code.Module(), syncCode = Code.Module(), packCode = Code.Module()):
 
     iterCode = Code.Module()
-    globalReadCode = self.perIterGlobalReadCode[iteration]
+    globalReadCode = copy.deepcopy(self.perIterGlobalReadCode[iteration])
     localWriteCode = self.perIterLocalWriteCode[iteration]
     isBarrier = kernel["LoopIters"] - self.numItersPLR
     hasLocalRead = localReadCode.countType(Code.LocalReadInst)
@@ -735,7 +734,8 @@ class KernelWriter(metaclass=abc.ABCMeta):
             iterCode.addCode(globalReadCode.items().pop(0))
         # schedule remaining globalReadInst
         if mfmaIndex == self.grEndMfmaIndex:
-          while globalReadCode.items() and globalReadCode.countType(Code.GlobalReadInst):
+          while (globalReadCode.items() and globalReadCode.countType(Code.GlobalReadInst)) or \
+                (globalReadCode.items() and kernel["PrefetchGlobalRead"] == 2):
             iterCode.addCode(globalReadCode.items().pop(0))
         # schedule remaining globalReadIncInst
         if i == numMfmaPerIter - 1:
@@ -1127,8 +1127,6 @@ class KernelWriter(metaclass=abc.ABCMeta):
       if self.enable["Sync"]:
         kl.append(self.syncThreads(kernel))
 
-    # noloadloop without globalRead and localWrite
-    self.perIterGlobalReadCode = [ Code.Module() for i in range (kernel["LoopIters"]) ]
     self.perIterLocalWriteCode = self.perIterLocalWriteCode2
     self.perIterLocalWriteCanSkip = [ 0 for i in range (kernel["LoopIters"]) ]
 
@@ -1141,7 +1139,7 @@ class KernelWriter(metaclass=abc.ABCMeta):
       isSwapAndResetLwoIter = isResetLroIter
       isSwapLroIter = isResetLroIter
       if kernel["ScheduleIterAlg"] == 3:
-        isSwapLroIter = (u == self.nextLoopLRMfmaIndex//(kernel["MIWaveTile"][0] * kernel["MIWaveTile"][1] * kernel["InnerUnroll"]))
+        # isSwapLroIter = (u == self.nextLoopLRMfmaIndex//(kernel["MIWaveTile"][0] * kernel["MIWaveTile"][1] * kernel["InnerUnroll"]))
         isSwapAndResetLwoIter = (u == self.lwEndMfmaIndex//(kernel["MIWaveTile"][0] * kernel["MIWaveTile"][1] * kernel["InnerUnroll"]))
       extraComment = ""
       if isResetLroIter:
@@ -1150,6 +1148,13 @@ class KernelWriter(metaclass=abc.ABCMeta):
         extraComment += " (swap and reset local write pointers iteration) "
       if isSwapLroIter:
         extraComment += " (swap local read pointers iteration) "
+
+      pointerLWCode = Code.Module()
+      pointerLRCode = Code.Module()
+      waitCode = Code.Module()  # may be overwritten (not added to) below
+      macIterCode = Code.Module()
+      waitLWCode = Code.Module()
+      syncCode = Code.Module()
 
       for iui in range(0,kernel["InnerUnroll"]):
         if self.enable["LocalRead"]:
@@ -1174,13 +1179,6 @@ class KernelWriter(metaclass=abc.ABCMeta):
               if iui*self.numReadsIterCoalescedB < kernel["InnerUnroll"]:
                 localReads.addText(self.comment("local read increment b"))
                 localReads.addText(self.localReadInc(kernel, iui, tensorParametersB))
-
-      pointerLWCode = Code.Module()
-      pointerLRCode = Code.Module()
-      waitCode = Code.Module()  # may be overwritten (not added to) below
-      macIterCode = Code.Module()
-      waitLWCode = Code.Module()
-      syncCode = Code.Module()
 
       if kernel["PrefetchGlobalRead"]:
         if u == localWriteEndIter+1 or (u == (localWriteEndIter+1)%kernel["LoopIters"] and kernel["ScheduleIterAlg"] == 2):
@@ -1209,6 +1207,7 @@ class KernelWriter(metaclass=abc.ABCMeta):
             pointerLRCode.addText(self.localReadSwapOffsets(kernel, kernel["ExpandPointerSwap"], tensorParametersA))
             pointerLRCode.addText(self.comment("local read swap offsets b"))
             pointerLRCode.addText(self.localReadSwapOffsets(kernel, kernel["ExpandPointerSwap"], tensorParametersB))
+
       if isResetLroIter: # ResetLroIter
         if self.enable["LocalRead"]:
           pointerLRCode.addText(self.comment("local read init pointers a"))

@@ -4913,7 +4913,7 @@ class KernelWriterAssembly(KernelWriter):
       if tP["isB"]:
         # Convert passed in S' to S for easy loop comparison.  S=S-(PGR-1)'
         kStr += inst("s_add_u32", sgpr("StaggerUIter"), sgpr("StaggerUIter"), \
-                  (kernel["PrefetchGlobalRead"]+1), \
+                  (2 if kernel["PrefetchGlobalRead"] else 1), \
                   "Subtract (PGR-1); StaggerUIter now contains target iteration to wrap")
     return kStr
 
@@ -4949,7 +4949,7 @@ class KernelWriterAssembly(KernelWriter):
       tc = tP["tensorChar"]
       tmp = self.getTmpSgpr(2).idx()
       # might be able to refactor this to eliminate signed math
-      kStr += inst("s_sub_i32", sgpr(tmp), 2+kernel["PrefetchGlobalRead"], \
+      kStr += inst("s_sub_i32", sgpr(tmp), 3 if kernel["PrefetchGlobalRead"] else 2, \
                   sgpr("StaggerUIter"), "")
       kStr += self.s_mul_i64_i32(sgpr(tmp), sgpr(tmp+1), \
                   sgpr(tmp), sgpr("GlobalReadIncs%s+%u"%(tc,self.unrollIdx)), \
