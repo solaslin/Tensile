@@ -788,7 +788,9 @@ class KernelWriter(metaclass=abc.ABCMeta):
         # how many localreads can skip is based on how many iterations we prefetch.
         localReads += self.numReadsPerIterA * skipReadsIterA + localReads + self.numReadsPerIterB * skipReadsIterB
         # some of localReads is interleaved after waitcnt in SIA3
-        if kernel["ScheduleIterAlg"] == 3 and (iteration < numReadsIterA or iteration < numReadsIterB or numPrefetchIter):
+        if kernel["ScheduleIterAlg"] == 3 and \
+          (iteration < numReadsIterA or iteration < numReadsIterB or numPrefetchIter) and \
+          self.enable["LocalRead"]:
           if (iteration < numReadsIterA and not dataAtIterA < max(dataAtIterA,dataAtIterB)) or numPrefetchIter:
             localReads -= self.numReadsPerIterA
           if (iteration < numReadsIterB and not dataAtIterB < max(dataAtIterA,dataAtIterB)) or numPrefetchIter:
