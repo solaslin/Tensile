@@ -1100,11 +1100,13 @@ class KernelWriterSource(KernelWriter):
     n1 = 1 if nwgg else 0
 
     if kernel["PersistentKernel"]:
+      # TODO - PK not support GSU in Assembly, but HIP is OK
       kStr += "  unsigned int numWGIJ = problemNumGroupTiles0*problemNumGroupTiles1;" + self.endLine
       if kernel["PersistentKernelAlongBatch"]:
         wgKSerial = "wgKSerial"
         wgIJSerial = "wgIJSerial"
         # compare serialWgIter against problem groups
+        # TODO - AlongBatch not support GSU in HIP now
         kStr += "  if (serialWgIter >= numWGIJ * sizeK) break; // persistent loop" + self.endLine
         kStr += "  %s  = serialWgIter / numWGIJ;%s" % ( wgKSerial, self.endLine)
         kStr += "  %s  = serialWgIter %% numWGIJ;%s" % ( wgIJSerial, self.endLine)
@@ -1112,7 +1114,10 @@ class KernelWriterSource(KernelWriter):
         kStr += "  %s  = %s / problemNumGroupTiles0;%s" % ( wg1, wgIJSerial, self.endLine)
       else:
         # compare serialWgIter against problem groups
-        kStr += "  if (serialWgIter >= numWGIJ) break; // persistent loop" + self.endLine
+        if kernel["GlobalSplitU"] > 1:
+          kStr += "  if (serialWgIter >= numWGIJ * GLOBAL_SPLITU) break; // persistent loop" + self.endLine
+        else:
+          kStr += "  if (serialWgIter >= numWGIJ) break; // persistent loop" + self.endLine
         kStr += "  %s  = serialWgIter %% problemNumGroupTiles0;%s" \
             % ( wg0, self.endLine)
         kStr += "  %s  = serialWgIter / problemNumGroupTiles0;%s" \
@@ -2982,10 +2987,10 @@ class KernelWriterSource(KernelWriter):
             kStr += self.endLine
     return kStr
 
-  def openPrefetchAcrossPersistent(self, kernel):
+  def openPrefetchAcrossPersistent(self, kernel, isOptNLL):
     return ""
 
-  def closePrefetchAcrossPersistent(self, kernel):
+  def closePrefetchAcrossPersistent(self, kernel, isOptNLL):
     return ""
 
   ##############################################################################
