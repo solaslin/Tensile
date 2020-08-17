@@ -1,0 +1,190 @@
+GlobalParameters:
+  # NumElementsToValidate: -1
+  # NumBenchmarks: 10
+  EnqueuesPerSync: 10
+  KernelTime: True
+  # DataInitTypeAB: 1
+  # DataInitTypeC: 0
+  # DataInitTypeBeta: 0
+  # DataInitTypeAlpha: 1
+  NewClient: 2
+  # PrintSolutionRejectionReason: True
+  CSVExportWinner: True
+  CSVMergeSameProblemID: True
+  # CMakeBuildType: Debug
+  # MergeFiles: False
+  # PrintTensorC: 2
+
+BenchmarkProblems:
+
+  ########################################
+  # HPA
+  ########################################
+  -
+    - # ProblemType
+      OperationType: GEMM
+      # DataType: s
+      DataType: h
+      # DataType: B
+      # DestDataType: B
+      # ComputeDataType: s
+      HighPrecisionAccumulate: True      
+      TransposeA: False
+      TransposeB: True
+      UseBeta: True
+      Batched: True
+    - # BenchmarkProblemSizeGroup - Standard
+      InitialSolutionParameters:
+      BenchmarkCommonParameters:
+        - KernelLanguage: ["Assembly"]  # Asm, PK Good        
+        - EdgeType: ["ShiftPtr"]                
+        - LoopTail: [True]
+      ForkParameters:
+        # - PrefetchLocalRead: [0]
+        # - ExpandPointerSwap: [False]  # True: Unroll Loop will become 1/2, 2/2 -> PAP will fail when SizeK/DU is even number >=4 (4,6...)
+        # - OptNoLoadLoop: [False]  # OptNNL only works in Asm
+        - PersistentKernelAlongBatch: [False,True] # Simple For Dev.
+        # - PersistentKernel: [0,1] # Test Case 1
+        - PersistentKernel: [0,1,2,4,8,16,32,64,100,120] # Test Case 2
+        # - PrefetchAcrossPersistent: [1] # Doesn't work in HIP
+        - ThreadTile:
+          # - [ 2, 2 ]
+          # - [ 2, 4 ]
+          # - [ 2, 8 ]
+          # - [ 4, 2 ]
+          # - [ 6, 2 ]
+          - [ 4, 4 ]
+          # - [ 4, 8 ]
+          # - [ 8, 2 ]
+          # - [ 8, 4 ]
+          # # - [ 8, 8 ]
+        - WorkGroup:          
+          # - [ 4, 16, 1 ]
+          # - [ 4, 32, 1 ]
+          - [ 8, 8, 1 ] # 8x8=64 thread (1wave), MT=16x16, When DU=4, NLPA = 1 -> PAP failed, can use this to debug
+          # - [ 8, 16, 1 ]  # Test Case 1
+          # - [ 8, 32, 1 ]
+          # - [ 16, 4, 1 ]
+          # - [ 16, 8, 1 ]
+          # - [ 16, 8, 1 ] # Test Case 2  # 16x8=128 thread (2wave), MT=64x32, When DU=4, NLPA = 2 -> PAP failed, can use this to debug
+          # - [ 16, 16, 1 ] # Test Case 2
+          # - [ 16, 32, 1 ]
+          # - [ 32, 4, 1 ]
+          # - [ 32, 8, 1 ]
+          # - [ 32, 16, 1 ]
+          # - [ 32, 32, 1 ]
+        # - AssertSummationElementMultiple: [2]
+        - AssertFree0ElementMultiple: [2]       # this seems affect persistent kernel 
+        # - AssertFree1ElementMultiple: [2]
+        # - PrefetchGlobalRead: [0]
+        # - DepthU: [4]  # Simple For Dev.
+        - DepthU: [32]
+        - VectorWidth: [2]
+        # - StoreRemapVectorWidth: [4]
+        # - GlobalReadVectorWidth: [4]
+        # - GlobalReadVectorWidth: [2]  # Legacy
+        # - StaggerUMapping: [0]
+        # - WorkGroupMapping: [0]
+      JoinParameters:
+      BenchmarkJoinParameters:
+      BenchmarkFinalParameters:
+        - ProblemSizes:
+          # - Range: [ [30528], [30528], [1], [4096] ]                   # dummy
+          - Exact: [ 64, 128, 512, 32, 64, 64, 64, 32 ]             # Assume PK gets better
+          - Exact: [ 64, 128, 512, 64, 64, 64, 64, 64 ]             # Assume PK gets better
+          - Exact: [ 64, 128, 512, 128, 64, 64, 64, 128 ]             # Assume PK gets better          
+          # - Exact: [ 64, 512, 1, 512, 64, 64, 64, 512 ]
+          # - Exact: [ 128, 64, 512, 128, 128, 128, 128, 64 ]           # Assume PK gets better // for 64x64x4 (4,4)x(16,16)x4, 2x1x512 = 1024
+          # - Exact: [ 1024, 1024, 1, 4096, 1024, 1024, 1024, 1024 ]    # assume PK not helps
+          # - Exact: [ 1024, 30528, 1, 4096, 1024, 1024, 1024, 30528 ]  # assume PK helps little no not (sizeK to large)
+          # - Range: [ [1024], [4096], [1], [32] ]                      # Test Case 1
+          #
+          # - Range: [ [1024], [30528], [1], [32] ]                   # Test Case 2
+          # - Range: [ [1024], [30528], [1], [64] ]                   # Test Case 2
+          # - Range: [ [1024], [30528], [1], [2048] ]                   # Test Case 2
+          # - Range: [ [1024], [30528], [1], [4096] ]                   # Test Case 2
+          # - Range: [ [1024], [4096], [1], [32] ]                   # Test Case 2
+          # - Range: [ [1024], [2048], [1], [32] ]                   # Test Case 2
+          # - Range: [ [1024], [1024], [1], [32] ]                   # Test Case 2
+          # - Range: [ [1024], [512], [1], [32] ]                   # Test Case 2
+
+
+          - Exact: [ 1024, 1024, 1, 32, 1024, 1024, 131072, 1024 ]  # NT BERT
+          - Exact: [ 512, 2048, 1, 256, 512, 512, 512, 2048 ]       # NT DLRM
+          - Exact: [ 768, 2048, 1, 256, 768, 768, 768, 2048 ]       # NT DLRM
+          #
+          # - Range: [ [64], [3840], [1], [4] ]                   # Test Case 2
+          # - Range: [ [32], [1936], [1], [8] ]                   # Test Case for 32x16x4 (4,2)x(8,8)x4, NLPA = 2
+          # - Range: [ [48], [1936], [1], [4] ]                   # Test Case for 48x16x4 (6,2)x(8,8)x4
+          # - Range: [ [64], [1936], [1], [4] ]                   # Test Case for 64x16x4 (8,2)x(8,8)x4
+          # - Range: [ [16], [1936], [1], [8] ]                   # Test Case for 16x16x4 (2,2)x(8,8)x4, NLPA = 1, only one kernel prefetch once 
+          # - Range: [ [32], [3872], [1], [4] ]                   # Test Case for 32x32x4 (4,4)x(8,8)x4
+          # - Range: [ [64], [1936], [1], [4] ]                   # Test Case for 64x16x4 (4,4)x(16,4)x4, NLPA = 4,(only one kernel prefetch once)
+          # - Range: [ [64], [3872], [1], [8] ]                   # Test Case for 64x32x4 (4,4)x(16,8)x4, NLPA = 2,(only one kernel prefetch once)
+          # - Range: [ [64], [7680], [1], [4] ]                   # Test Case for 64x32x4 (4,4)x(16,8)x4, NLPA = 2,(each kernel prefetch once)
+          # - Range: [ [64], [7680], [1], [32] ]                   # Test Case 2
+          # - Range: [ [64], [7744], [1], [4] ]                   # Test Case 2 for 64x64x4 (4,4)x(16,16)x4, 121 MT, one WG prefetch, DU = 4, NLPA = 1, never fail...
+          # - Range: [ [32], [3872], [1], [64] ]                   # Test Case 2
+          - Exact: {sizes: [64, 32, 4608, 32], stridesA: [-1, 294912, 64], stridesB: [-1, 32, 1024], stridesC: [-1, 64, 2048], stridesD: [-1, 64, 2048] }
+          # - Range: [ [32], [3744, 32, 3936], [1], [4] ]                   # HPA Test (4x4)x(8x8)x4, When PK=1 -> #WG = 120, when 3840 (#MTs=120) pass, 3872 fail (MTs=121)          
+
+  ########################################
+  # no HPA
+  ########################################
+  -
+    - # ProblemType
+      OperationType: GEMM
+      DataType: h
+      # HighPrecisionAccumulate: True
+      TransposeA: False
+      TransposeB: True
+      UseBeta: True
+      Batched: True
+    - # BenchmarkProblemSizeGroup - Standard
+      InitialSolutionParameters:
+      BenchmarkCommonParameters:
+        - KernelLanguage: ["Assembly"]  # Asm, PK Good        
+        - EdgeType: ["ShiftPtr"]                
+        - LoopTail: [True]
+      ForkParameters:
+        # - PrefetchLocalRead: [0]
+        # - ExpandPointerSwap: [False]  # True: Unroll Loop will become 1/2, 2/2 -> PAP will fail when SizeK/DU is even number >=4 (4,6...)
+        # - OptNoLoadLoop: [False]  # OptNNL only works in Asm
+        - PersistentKernelAlongBatch: [False,True] # Simple For Dev.
+        - PersistentKernel: [0,1,2,4,8,16,32,64,100,120] # Test Case 2
+        # - PersistentKernel: [0,1] # Test Case 2
+        - ThreadTile:
+          - [ 4, 4 ]
+        - WorkGroup:          
+          - [ 8, 8, 1 ] # 8x8=64 thread (1wave), MT=16x16, When DU=4, NLPA = 1 -> PAP failed, can use this to debug
+        # - AssertSummationElementMultiple: [2]
+        - AssertFree0ElementMultiple: [2]       # this seems affect persistent kernel 
+        # - AssertFree1ElementMultiple: [2]
+        # - PrefetchGlobalRead: [0]
+        # - DepthU: [4]  # Simple For Dev.
+        - DepthU: [32]
+        - VectorWidth: [2]
+        # - StoreRemapVectorWidth: [4]
+        # - GlobalReadVectorWidth: [4]
+        # - GlobalReadVectorWidth: [2]  # Legacy
+        # - StaggerUMapping: [0]
+        # - WorkGroupMapping: [0]
+      JoinParameters:
+      BenchmarkJoinParameters:
+      BenchmarkFinalParameters:
+        - ProblemSizes:
+          - Exact: [ 64, 128, 512, 32, 64, 64, 64, 32 ]             # Assume PK gets better
+          - Exact: [ 64, 128, 512, 64, 64, 64, 64, 64 ]             # Assume PK gets better
+          - Exact: [ 64, 128, 512, 128, 64, 64, 64, 128 ]             # Assume PK gets better          
+          - Exact: [ 1024, 1024, 1, 32, 1024, 1024, 131072, 1024 ]  # NT BERT
+          - Exact: [ 512, 2048, 1, 256, 512, 512, 512, 2048 ]       # NT DLRM
+          - Exact: [ 768, 2048, 1, 256, 768, 768, 768, 2048 ]       # NT DLRM
+          - Exact: {sizes: [64, 32, 4608, 32], stridesA: [-1, 294912, 64], stridesB: [-1, 32, 1024], stridesC: [-1, 64, 2048], stridesD: [-1, 64, 2048] }
+          - Range: [ [32], [3744, 32, 3936], [1], [4] ]                   # HPA Test (4x4)x(8x8)x4, When PK=1 -> #WG = 120, when 3840 (#MTs=120) pass, 3872 fail (MTs=121)
+
+LibraryLogic:
+    ScheduleName: "arcturus"
+    DeviceNames: ["Device 7380", "Device 7388", "Device 738c", "Device 7390"]
+    ArchitectureName: "gfx908"
+
+# LibraryClient:
