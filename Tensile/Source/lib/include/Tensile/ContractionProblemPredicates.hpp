@@ -955,8 +955,14 @@ namespace Tensile
 
                 virtual bool operator()(ContractionProblem const& problem) const override
                 {
-                    return problem.d().totalLogicalElements() * value <= problem.workspaceSize();
-                }
+                    size_t GSU = (value == 0)? 1: value / 4;
+                    if (GSU > 1) {
+                      return (problem.d().totalLogicalElements() * value <= problem.workspaceSize())
+                                 && (problem.boundSize(0) / GSU >= 256);
+                    } else {
+                      return true;
+                    }
+                 }
             };
 
         } // namespace Contraction
