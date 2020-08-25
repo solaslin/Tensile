@@ -518,6 +518,7 @@ int main(int argc, const char* argv[])
                 auto solution = solutionIterator->getSolution();
 
                 listeners.preSolution(*solution);
+                problem.checkPersistentKernelEligibility(*solution, *hardware);
 
                 if(solutionIterator->runCurrentSolution())
                 {

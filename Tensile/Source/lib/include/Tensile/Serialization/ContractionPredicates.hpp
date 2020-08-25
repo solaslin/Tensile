@@ -81,6 +81,7 @@ namespace Tensile
                     Base::template Pair<Predicates::Contraction::BufferLoadOffsetLimitCheck>(),
                     Base::template Pair<Predicates::Contraction::BufferStoreOffsetLimitCheck>(),
                     Base::template Pair<Predicates::Contraction::WorkspaceCheck>(),
+                    Base::template Pair<Predicates::Contraction::PersistentKernelCheck>(),
                 });
 
                 auto gmap = Generic::GetSubclasses();
@@ -246,6 +247,12 @@ namespace Tensile
         template <typename IO>
         struct MappingTraits<Predicates::Contraction::WorkspaceCheck, IO>
             : public AutoMappingTraits<Predicates::Contraction::WorkspaceCheck, IO>
+        {
+        };
+
+        template <typename IO>
+        struct MappingTraits<Predicates::Contraction::PersistentKernelCheck, IO>
+            : public AutoMappingTraits<Predicates::Contraction::PersistentKernelCheck, IO>
         {
         };
     } // namespace Serialization

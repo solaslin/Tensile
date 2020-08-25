@@ -299,7 +299,7 @@ namespace Tensile
             std::swap(rv.numWorkGroups.x, rv.numWorkGroups.y);
 
         uint32_t problemNumGroupTiles0 = rv.numWorkGroups.x;
-        uint32_t problemNumGroupTiles1 = rv.numWorkGroups.y;        
+        uint32_t problemNumGroupTiles1 = rv.numWorkGroups.y;
         uint32_t problemNumGroupTiles2 = rv.numWorkGroups.z;    // used only when persistent kernel along batch
 
         rv.numWorkGroups.y *= sizeMapping.globalSplitU;
