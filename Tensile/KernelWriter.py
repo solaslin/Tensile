@@ -1131,13 +1131,33 @@ class KernelWriter(metaclass=abc.ABCMeta):
       pfi = 1
       kl.append(self.comment("prefetch: global -> local"))
       kl.append(self.openSumAtLeastUnroll(kernel, prefetch=True, isPap=isPap, isOptNLL=isOptNLL))
-      if self.enable["GlobalRead"]:
-        kl.append(str(self.directToLdsM0Update(kernel, 0, tensorParametersA)))
-        kl.append(str(self.globalReadDo(kernel, 0, tensorParametersA)))
-        kl.append(str(self.directToLdsM0Update(kernel, 0, tensorParametersB)))
-        kl.append(str(self.globalReadDo(kernel, 0, tensorParametersB)))
-      if self.enable["GlobalReadInc"]:
-        kl.append(self.globalReadIncrementAB(kernel, self.unrollIdx, pfi))
+      if isPap and isOptNLL:
+        if self.enable["GlobalRead"]:
+          self.dtlsM0UpdateACode = self.directToLdsM0Update(kernel, 0, tensorParametersA)
+          self.globalReadACode = self.globalReadDo(kernel, 0, tensorParametersA)
+          self.dtlsM0UpdateBCode = self.directToLdsM0Update(kernel, 0, tensorParametersB)
+          self.globalReadBCode = self.globalReadDo(kernel, 0, tensorParametersB)
+        else:
+          self.dtlsM0UpdateACode = Code.StructuredModule()
+          self.globalReadACode = Code.StructuredModule() # empty
+          self.dtlsM0UpdateBCode = Code.StructuredModule()
+          self.globalReadBCode = Code.StructuredModule() # empty
+
+        if self.enable["GlobalReadInc"]:
+          self.globalReadIncrements = self.globalReadIncrementAB(kernel, self.unrollIdx, pfi)
+        else:
+          self.globalReadIncrements = Code.Module()
+          self.globalReadIncrements.addCode(Code.Module("globalReadIncrementA"))
+          self.globalReadIncrements.addCode(Code.Module("globalReadIncrementB"))
+
+      else:
+        if self.enable["GlobalRead"]:
+          kl.append(str(self.directToLdsM0Update(kernel, 0, tensorParametersA)))
+          kl.append(str(self.globalReadDo(kernel, 0, tensorParametersA)))
+          kl.append(str(self.directToLdsM0Update(kernel, 0, tensorParametersB)))
+          kl.append(str(self.globalReadDo(kernel, 0, tensorParametersB)))
+        if self.enable["GlobalReadInc"]:
+          kl.append(self.globalReadIncrementAB(kernel, self.unrollIdx, pfi))
 
     kl.append(self.comment3("End setupNewTile, isPap=%s") % isPap)
 
@@ -1291,6 +1311,18 @@ class KernelWriter(metaclass=abc.ABCMeta):
 
     kl.append(self.comment3("%s NoLoadLoop - Begin") % ("Opt." if isOptNLL else "Ord."))
 
+    self.dtlsM0UpdateACode = Code.StructuredModule()
+    self.globalReadACode = Code.StructuredModule() # empty
+    self.dtlsM0UpdateBCode = Code.StructuredModule()
+    self.globalReadBCode = Code.StructuredModule() # empty
+    self.globalReadIncrements = Code.Module()
+    self.globalReadIncrements.addCode(Code.Module("globalReadIncrementA"))
+    self.globalReadIncrements.addCode(Code.Module("globalReadIncrementB"))
+    self.localWriteACode = Code.Module()
+    self.localWriteBCode = Code.Module()
+    localWriteEndIter = kernel["LoopIters"] - self.numItersPLR - 1
+
+    # the scheduled GlobalRead,Inc code of PAP is inside openSumAtLeastUnroll (if PAP=on)
     kl.append(self.openSumAtLeastUnroll(kernel, prefetch=False, isPap=False, \
         isOptNLL=isOptNLL))
     if not self.numItersPLR:
@@ -1299,10 +1331,10 @@ class KernelWriter(metaclass=abc.ABCMeta):
       if self.enable["Sync"]:
         kl.append(self.syncThreads(kernel))
 
-    # noloadloop without globalRead and localWrite
-    self.perIterGlobalReadCode = [ Code.Module() for i in range (kernel["LoopIters"]) ]
-    self.perIterLocalWriteCode = [ Code.Module() for i in range (kernel["LoopIters"]) ]
-    self.perIterLocalWriteCanSkip = [ 0 for i in range (kernel["LoopIters"]) ]
+    # PAP would have GlobalRead and GlobalInc, but no localWrite
+    # Get the perIterGlobalReadCode code for PAP (if PAP=On), else would be empty
+    self.makeSchedule(kernel, tensorParametersA, tensorParametersB, localWriteEndIter)
+    kl.append(str(self.unrollLoopHeaderCode))
 
     for u in range(0, kernel["LoopIters"]):
       kl.append(self.comment("iter %u"%u))
