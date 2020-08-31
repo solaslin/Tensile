@@ -600,6 +600,14 @@ namespace Tensile
         auto sizeMapping = solution.sizeMapping;
         if(sizeMapping.persistentKernel == 0)
             return;
+
+        // PK barely gains performance when size-K >> DepthU
+        if(m_boundSizes[0] / sizeMapping.depthU > 16)
+        {
+            m_eligibleForPK = false;
+            return;
+        }
+
         size_t persistentGroups
             = dynamic_cast<AMDGPU const&>(hardware).computeUnitCount * sizeMapping.persistentKernel;
 
