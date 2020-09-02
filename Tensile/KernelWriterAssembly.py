@@ -2151,7 +2151,7 @@ class KernelWriterAssembly(KernelWriter):
                 """
                 #kStr += self.bomb(-13)
       else:
-        printExit("Bfloat16 not supported for arch=%u" % self.version )
+        printExit("Bfloat16 not supported for arch=%s" % str(self.version) )
 
 
     # integer i8
@@ -11556,7 +11556,8 @@ class KernelWriterAssembly(KernelWriter):
                 d = ss.elementSumIdx[elementIdx] + vi//2
                 kStr += inst("v_pack_b32_f16", vgpr(d), vgpr("ValuC+%u"%(sumIdxV-1)), vgpr("ValuC+%u"%sumIdxV), "Pack with neighbor" )
 
-            elif kernel["ProblemType"]["DestDataType"].isBFloat16():
+          elif kernel["ProblemType"]["DataType"].isBFloat16():
+            if kernel["ProblemType"]["HighPrecisionAccumulate"] and kernel["ProblemType"]["DestDataType"].isBFloat16():
               kStr += inst("v_cmp_u_f32", sgpr(tmpS01,2), vgpr("ValuC+%u"%sumIdxV), vgpr("ValuC+%u"%sumIdxV), "check Nan" )
               kStr += inst("v_bfe_u32", vgpr(vgprBf16Temp), vgpr("ValuC+%u"%sumIdxV), "16", "1", "Non-Nan case: store lsb of bf16" )
               kStr += inst("v_add3_u32", vgpr(vgprBf16Temp), vgpr("ValuC+%u"%sumIdxV), vgpr(vgprBf16Temp), vgpr(vgprBf16Inc), "Non-Nan case: add lsb and the increment for rounding" )
