@@ -1170,6 +1170,7 @@ class ProblemType(collections.abc.Mapping):
     # precision and other
     name += "_"
     name += self["DataType"].toChar()
+    if self["DataType"] != self["DestDataType"]: name += self["DestDataType"].toChar()
     if self["UseBeta"]: name += "B"
     if self["HighPrecisionAccumulate"] and not self["SilentHighPrecisionAccumulate"]: name += "H"
     if self["UseInitialStridesAB"]: name += "I"
