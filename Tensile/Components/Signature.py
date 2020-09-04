@@ -187,7 +187,7 @@ class SignatureCOV2(Signature):
             kernel["ThreadTile0"] == 4 and kernel["ThreadTile1"] == 4 and kernel["WorkGroup"] == [16,16,1]:
             group_segment_size = 32768 # Pad LDS to ensure we run exactly two waves
         else:
-            group_segment_size = kernel["LdsNumElements"] * writer.bpeAB
+            group_segment_size = kernel["LdsNumElements"] * writer.bpeCexternal
         kStr += "  %s %u // lds bytes%s" % ( tWord, group_segment_size, writer.endLine )
 
         if writer.archCaps["HasWave32"]:
@@ -377,7 +377,7 @@ class SignatureCOV3(Signature):
             kernel["ThreadTile0"] == 4 and kernel["ThreadTile1"] == 4 and kernel["WorkGroup"] == [16,16,1]:
             group_segment_size = 32768 # Pad LDS to ensure we run exactly two waves
         else:
-            group_segment_size = kernel["LdsNumElements"] * writer.bpeAB
+            group_segment_size = kernel["LdsNumElements"] * writer.bpeCexternal
         kStr += "  %s %u // lds bytes%s" % ( tWord, group_segment_size, writer.endLine )
 
         if writer.archCaps["HasWave32"]:

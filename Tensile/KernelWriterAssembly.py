@@ -634,7 +634,7 @@ class KernelWriterAssembly(KernelWriter):
 
   @staticmethod
   def getLdsSize(kernel):
-    ldsSize = kernel["LdsNumElements"] * kernel["ProblemType"]["DataType"].numBytes()
+    ldsSize = kernel["LdsNumElements"] * kernel["ProblemType"]["DestDataType"].numBytes()
     return ldsSize
 
   ########################################
@@ -2952,8 +2952,8 @@ class KernelWriterAssembly(KernelWriter):
 
       # set m0
       kStr += inst("s_mov_b32", "m0", hex(kernel["LdsNumElements"] \
-          * self.bpeAB), "LDS clamp at %u bytes" \
-          %(kernel["LdsNumElements"] * self.bpeAB) )
+          * self.bpeCexternal), "LDS clamp at %u bytes" \
+          %(kernel["LdsNumElements"] * self.bpeCexternal) )
 
       # set Serial id vpgr
       kStr += inst("v_mov_b32", vgpr("Serial"), vgpr(0), "thread serial id")
@@ -9035,7 +9035,7 @@ class KernelWriterAssembly(KernelWriter):
       kStr += inst("ds_write_b128", addr0, vgpr(srcVgpr, rpv), \
                  "offset:%u"%offset, "storeRemap lw")
     else:
-       assert ("StoreRemap: bad bps!")
+      assert 0, "StoreRemap: bad bps!"
 
     return kStr
 
@@ -9075,6 +9075,8 @@ class KernelWriterAssembly(KernelWriter):
         kStr += inst("ds_read_b64", dst, src, "offset:%u"%offset, "storeRemap lr")
       elif bps==16:
         kStr += inst("ds_read_b128", dst, src, "offset:%u"%offset, "storeRemap lr")
+      else:
+        assert 0, "StoreRemap: bad bps!"
 
     kStr += "\n"
 
@@ -11416,7 +11418,8 @@ class KernelWriterAssembly(KernelWriter):
       kStr += self.comment("apply mask, calc new C and issue writes")
       #kStr += self.bomb() # can see store addresses just before the store inst
 
-      if kernel["ProblemType"]["DestDataType"].isBFloat16() and kernel["ProblemType"]["HighPrecisionAccumulate"]:
+      if kernel["ProblemType"]["DataType"].isBFloat16() and kernel["ProblemType"]["HighPrecisionAccumulate"] \
+         and kernel["ProblemType"]["DestDataType"].isBFloat16():
         vgprBf16Temp = self.vgprPool.checkOut(4)
         vgprBf16Mask = vgprBf16Temp + 1
         vgprFp32Nan = vgprBf16Temp + 2
@@ -11578,7 +11581,8 @@ class KernelWriterAssembly(KernelWriter):
           # Column Block Shape has been written to LDS
           # Now read back and write out to global memory
 
-      if kernel["ProblemType"]["DestDataType"].isBFloat16() and kernel["ProblemType"]["HighPrecisionAccumulate"]:
+      if kernel["ProblemType"]["DataType"].isBFloat16() and kernel["ProblemType"]["HighPrecisionAccumulate"] and \
+         kernel["ProblemType"]["DestDataType"].isBFloat16():
         self.vgprPool.checkIn(vgprBf16Temp)
 
           #kStr += self.bomb(5)
@@ -11902,7 +11906,7 @@ class KernelWriterAssembly(KernelWriter):
     tmp = self.vgprPool.checkOut(1)
     tmpAddr = self.vgprPool.checkOut(1)
     kStr += inst("v_mov_b32", vgpr(tmp), hex(value), "Init value")
-    numBytesPerElement = kernel["ProblemType"]["DataType"].numBytes()
+    numBytesPerElement = kernel["ProblemType"]["DestDataType"].numBytes()
     writesPerThread = ((kernel["LdsNumElements"]*numBytesPerElement-1)//kernel["NumThreads"]//4) + 1
     kStr += inst("v_lshlrev_b32", \
         vgpr(tmpAddr), \
