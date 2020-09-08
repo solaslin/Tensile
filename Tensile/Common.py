@@ -219,6 +219,9 @@ globalParameters["PerfModelL2WriteHits"] = 0.15
 globalParameters["PerfModelL2ReadBwMul"] = 2
 globalParameters["PerfModelReadEfficiency"] = 0.85
 
+# testing
+globalParameters["ReducePKSolutions"] = False
+
 # Save a copy - since pytest doesn't re-run this initialization code and YAML files can override global settings - odd things can happen
 defaultGlobalParameters = deepcopy(globalParameters)
 
@@ -743,8 +746,9 @@ validParameters = {
     #         more opportunities to schedule other WG or recover if a wg runs long
     #         or all compute units were not available before the launch.
     #       - Host code will not launch more groups than tiles in the C space
+    # -1 : Automatically choose the largest value that makes each cu work on 2 MTs
     # Assertions/Requirements: NumWorkGroups0 * NumWorkGroups1 < 2^32
-    "PersistentKernel":           range(0,512+1) ,       # Use persistent kernel.
+    "PersistentKernel":           range(-1,512+1) ,       # Use persistent kernel.
 
     # True:  Batch dimension (WG.z) is also considered in persistent kernel
     # False: Not considered

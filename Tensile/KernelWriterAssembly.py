@@ -1882,7 +1882,7 @@ class KernelWriterAssembly(KernelWriter):
 
     if kernel["PersistentKernel"]:
       self.defineSgpr("SerialWorkGroupIter", 1) # Track sequential persistent wg
-      # self.defineSgpr("PersistentLoopIter", 1) # Back-up: The count of current persistent loop, not needed now
+      self.defineSgpr("PersistentLoopIter", 1) # Back-up: The count of current persistent loop, not needed now
       if kernel["PersistentKernelAlongBatch"]:
         self.defineSgpr("WGKSerial", 1)  # for persistent kernel along batch, wgK of PK-remapping
         self.defineSgpr("WGIJSerial", 1)  # for persistent kernel along batch, wgIJ of PK-remapping
@@ -2871,7 +2871,7 @@ class KernelWriterAssembly(KernelWriter):
       elif self.overflowedResources == 5:
         msg = "reading and writing LDS at same time require 2 LDS buffer"
       elif self.overflowedResources == 6:
-        msg = "Persistent Kernel is better for only occupancy < 2"
+        msg = "Persistent Kernel is better for only occupancy <= 2"
       else:
         msg = "unknown"
 
@@ -3101,7 +3101,7 @@ class KernelWriterAssembly(KernelWriter):
 
     if kernel["PersistentKernel"]:
       kStr += inst("s_mov_b32", sgpr("SerialWorkGroupIter"), sgpr("WorkGroup0"), "init SerialWorkGroupIter")
-      # kStr += inst("s_mov_b32", sgpr("PersistentLoopIter"), 0, "init PersistentKernelLoop Iter")  # Back-up: not needed now
+      kStr += inst("s_mov_b32", sgpr("PersistentLoopIter"), 0, "init PersistentKernelLoop Iter")  # Back-up: not needed now
     if self.prefetchAcrossPersistent0 and kernel["ExpandPointerSwap"]:
       kStr += inst("s_mov_b32", sgpr("EvenIterStart"), 0, "init SerialWorkGroupIter")
 
@@ -3190,7 +3190,7 @@ class KernelWriterAssembly(KernelWriter):
     if kernel["PersistentKernel"]:
       kStr += self.comment3("Persistent Loop Start")
       kStr += self.getLabelDef("PersistentLoopStart")
-      # kStr += inst("s_add_u32", sgpr("PersistentLoopIter"), sgpr("PersistentLoopIter"), hex(1), "Inc PersistentLoop Iter")   # Back-up: not needed now
+      kStr += inst("s_add_u32", sgpr("PersistentLoopIter"), sgpr("PersistentLoopIter"), hex(1), "Inc PersistentLoop Iter")   # Back-up: not needed now
       #kStr += str(Code.WaitCnt(self.version, 0,0,"wait for outstanding stores"))
 
     return kStr
@@ -11495,9 +11495,10 @@ class KernelWriterAssembly(KernelWriter):
       self.overflowedResources = 2
 
     # Persistent Kernel is better for small occupancy
-    if kernel["PersistentKernel"] and \
-        self.getOccupancy(kernel["NumThreads"], self.vgprPool.size(), self.getLdsSize(kernel), self.agprPool.size()) > 2:
-      self.overflowedResources = 6
+    if globalParameters["ReducePKSolutions"]:
+      if kernel["PersistentKernel"] and \
+         self.getOccupancy(kernel["NumThreads"], self.vgprPool.size(), self.getLdsSize(kernel), self.agprPool.size()) > 2:
+        self.overflowedResources = 6
 
     vgprPerCU = 65536
     vgprPerThreadPerOccupancy = vgprPerCU // kernel["NumThreads"]

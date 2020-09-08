@@ -1279,7 +1279,12 @@ class KernelWriter(metaclass=abc.ABCMeta):
           kl.append(self.initC(kernel)) # initC while waiting for global reads
         kl.append(self.closeShadowInit(kernel))
       if self.enable["Wait"]:
+        if self.prefetchAcrossPersistent:
+          kl.append( "s_cmp_gt_u32 s[sgprPersistentLoopIter], 0x1")
+          kl.append( "s_cbranch_scc1 skipWaitCntLabel")
         kl.append(self.wait(kernel, tensorParametersA, tensorParametersB, 0, -1, -1, "8wait for global read"))
+        if self.prefetchAcrossPersistent:
+          kl.append( "skipWaitCntLabel:")
         # These cases loop back and run the prefetch loop again
         # we need an extra barrier to ensure that the ds_reads from previous iteration
         # have finished before we generate the prefetch for the next summation index.
@@ -1306,7 +1311,10 @@ class KernelWriter(metaclass=abc.ABCMeta):
         if self.enable["Wait"]:
           kl.append(self.wait(kernel, tensorParametersA, tensorParametersB, -1, 0, -1, "0prefetch wait for local write"))
         if self.enable["Sync"]:
-          kl.append(self.syncThreads(kernel))
+          if self.prefetchAcrossPersistent:
+            kl.append( self.indent + self.syncStr + "// PAP only ")
+          else:
+            kl.append(self.syncThreads(kernel))
 
         # in some cases need an extra copy of the LDS read with appropriate double buffer offsets
         if self.enable["LocalRead"]:
@@ -1347,7 +1355,10 @@ class KernelWriter(metaclass=abc.ABCMeta):
           kl.append(self.wait(kernel, tensorParametersA, tensorParametersB, 1, 0, -1, \
               "1wait for local write"))
         if self.enable["Sync"]:
-          kl.append(self.syncThreads(kernel, "4sync for global read"))
+          if self.prefetchAcrossPersistent:
+            kl.append( self.indent + self.syncStr + "// PAP only ")
+          else:
+            kl.append(self.syncThreads(kernel, "4sync for global read"))
 
       if self.enable["GlobalRead"]:
         # unrolled loop: global read A, B

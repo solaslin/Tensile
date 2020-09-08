@@ -601,15 +601,12 @@ namespace Tensile
         if(sizeMapping.persistentKernel == 0)
             return;
 
-        // PK barely gains performance when size-K >> DepthU
-        if(m_boundSizes[0] / sizeMapping.depthU > 16)
-        {
-            m_eligibleForPK = false;
-            return;
-        }
-
-        size_t persistentGroups
-            = dynamic_cast<AMDGPU const&>(hardware).computeUnitCount * sizeMapping.persistentKernel;
+        // // PK barely gains performance when size-K >> DepthU
+        // if(m_boundSizes[0] / sizeMapping.depthU > 16)
+        // {
+        //     m_eligibleForPK = false;
+        //     return;
+        // }
 
         // Get the normal WorkGroup numbers by sizeMapping MacroTile
         dim3 numWG(1, 1, 1);
@@ -638,6 +635,17 @@ namespace Tensile
         size_t problemTiles = numWG.x * numWG.y;
         if(sizeMapping.persistentKernelAlongBatch)
             problemTiles *= numWG.z;
+
+        size_t cuCount = dynamic_cast<AMDGPU const&>(hardware).computeUnitCount;
+        size_t finalPKValue = sizeMapping.persistentKernel;
+        if(finalPKValue == -1)
+        {
+            finalPKValue = 5 * (problemTiles / cuCount ) / 8;
+            finalPKValue = std::max(finalPKValue, (size_t)1);
+            // finalPKValue = std::max(problemTiles / cuCount, (size_t)1);
+        }
+
+        size_t persistentGroups = cuCount * finalPKValue;
 
         // If #PKWG (PK*CUs) >= #TotalTiles, the persistent kernel behaves just like non-PK
         m_eligibleForPK = persistentGroups < problemTiles;
