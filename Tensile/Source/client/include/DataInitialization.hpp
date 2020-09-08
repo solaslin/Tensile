@@ -804,6 +804,49 @@ namespace Tensile
         }
 
         template <>
+        inline int8_t DataInitialization::getValue<int8_t, InitMode::Zero>()
+        {
+            return 0;
+        }
+        template <>
+        inline int8_t DataInitialization::getValue<int8_t, InitMode::One>()
+        {
+            return 1;
+        }
+        template <>
+        inline int8_t DataInitialization::getValue<int8_t, InitMode::Two>()
+        {
+            return 2;
+        }
+        template <>
+        inline int8_t DataInitialization::getValue<int8_t, InitMode::NaN>()
+        {
+            throw std::runtime_error("NaN not available for int8_t.");
+        }
+        template <>
+        inline int8_t DataInitialization::getValue<int8_t, InitMode::Inf>()
+        {
+            throw std::runtime_error("Inf not available for int8_t.");
+        }
+
+        template <>
+        inline int8_t DataInitialization::getValue<int8_t, InitMode::Random>()
+        {
+            return static_cast<int8_t>((rand() % 7) - 3);
+        }
+
+        template <>
+        inline int8_t DataInitialization::getValue<int8_t, InitMode::BadInput>()
+        {
+            return std::numeric_limits<int8_t>::max();
+        }
+        template <>
+        inline int8_t DataInitialization::getValue<int8_t, InitMode::BadOutput>()
+        {
+            return std::numeric_limits<int8_t>::min();
+        }
+
+        template <>
         inline bool DataInitialization::isBadInput<float>(float value)
         {
             return std::isnan(value);
@@ -849,6 +892,12 @@ namespace Tensile
         inline bool DataInitialization::isBadInput<BFloat16>(BFloat16 value)
         {
             return std::isnan(value);
+        }
+
+        template <>
+        inline bool DataInitialization::isBadInput<int8_t>(int8_t value)
+        {
+            return value == DataInitialization::getValue<int8_t, InitMode::BadInput>();
         }
 
         template <>
@@ -898,6 +947,12 @@ namespace Tensile
         inline bool DataInitialization::isBadOutput<BFloat16>(BFloat16 value)
         {
             return std::isinf(value);
+        }
+
+        template <>
+        inline bool DataInitialization::isBadOutput<int8_t>(int8_t value)
+        {
+            return value == DataInitialization::getValue<int8_t, InitMode::BadOutput>();
         }
     } // namespace Client
 } // namespace Tensile
