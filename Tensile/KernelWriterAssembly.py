@@ -4911,8 +4911,12 @@ class KernelWriterAssembly(KernelWriter):
       lastIterEnd = self.getLabelNum("PrefetchGlobalLastIterEnd")
 
     # This branch could potentially be very far - use 32bit branch
-    kStr += self.comment("after InitC, skip to end of prefetch last iter if numIter==0")
-    kStr += self.longBranchScc1("label_%04u"%lastIterEnd)
+    #kStr += self.comment("after InitC, skip to end of prefetch last iter if numIter==0")
+    #kStr += self.longBranchScc1("label_%04u"%lastIterEnd)
+
+    kStr += inst("s_cbranch_scc1 label_%04u"\
+          % lastIterEnd, \
+          "after InitC, skip to end of prefetch last iter b/c numIter==0")
 
     return kStr
 
