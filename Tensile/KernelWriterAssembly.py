@@ -4926,8 +4926,8 @@ class KernelWriterAssembly(KernelWriter):
   def longBranch(self, label):
     kStr = ""
     tmpSgpr = self.getTmpSgpr(3).idx()
-    kStr += inst("s_mov_b32", sgpr(tmpSgpr+2), "%s"%label, "target branch label offset")
     kStr += inst("s_getpc_B64", sgpr(tmpSgpr,2), "addr of next instr")
+    kStr += inst("s_mov_b32", sgpr(tmpSgpr+2), "%s"%label, "target branch label offset")
     kStr += inst("s_add_u32", sgpr(tmpSgpr), sgpr(tmpSgpr), sgpr(tmpSgpr+2), "add target branch offset")
     kStr += inst("s_addc_u32", sgpr(tmpSgpr+1), 0, sgpr(tmpSgpr+1), "add high and carry")
     kStr += inst("s_setpc_b64", sgpr(tmpSgpr,2), "branch to %s"%label)
