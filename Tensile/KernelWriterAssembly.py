@@ -4910,13 +4910,9 @@ class KernelWriterAssembly(KernelWriter):
     else:
       lastIterEnd = self.getLabelNum("PrefetchGlobalLastIterEnd")
 
-    # This branch could potentially be very far - use 32bit branch
-    #kStr += self.comment("after InitC, skip to end of prefetch last iter if numIter==0")
-    #kStr += self.longBranchScc1("label_%04u"%lastIterEnd)
-
-    kStr += inst("s_cbranch_scc1 label_%04u"\
-          % lastIterEnd, \
-          "after InitC, skip to end of prefetch last iter b/c numIter==0")
+    # This branch could potentially be very far e.g. > SIMM16
+    kStr += self.comment("after InitC, skip to end of prefetch last iter if numIter==0")
+    kStr += self.longBranchScc1("label_%04u"%lastIterEnd)
 
     return kStr
 
@@ -4931,7 +4927,7 @@ class KernelWriterAssembly(KernelWriter):
     kStr = ""
     tmpSgpr = self.getTmpSgpr(3).idx()
     kStr += inst("s_getpc_B64", sgpr(tmpSgpr,2), "addr of next instr")
-    kStr += inst("s_mov_b32", sgpr(tmpSgpr+2), "%s"%label, "target branch label offset")
+    kStr += inst("s_add_u32", sgpr(tmpSgpr+2), "%s"%label, hex(4), "target branch offset")
     kStr += inst("s_add_u32", sgpr(tmpSgpr), sgpr(tmpSgpr), sgpr(tmpSgpr+2), "add target branch offset")
     kStr += inst("s_addc_u32", sgpr(tmpSgpr+1), 0, sgpr(tmpSgpr+1), "add high and carry")
     kStr += inst("s_setpc_b64", sgpr(tmpSgpr,2), "branch to %s"%label)
