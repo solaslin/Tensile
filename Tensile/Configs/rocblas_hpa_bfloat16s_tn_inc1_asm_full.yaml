@@ -9,7 +9,7 @@ GlobalParameters:
   NumBenchmarks: 1
   SyncsPerBenchmark: 1
   LibraryPrintDebug: False
-  NumElementsToValidate: 0
+  NumElementsToValidate: 65536
   ValidationMaxToPrint: 0
   ValidationPrintValids: False
   ShortNames: False

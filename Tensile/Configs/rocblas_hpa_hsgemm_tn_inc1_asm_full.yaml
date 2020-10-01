@@ -1,5 +1,5 @@
 GlobalParameters:
-  NumElementsToValidate: 0
+  NumElementsToValidate: 65536
   KernelTime: True
   DataInitTypeAlpha: 1
   DataInitTypeBeta: 0
