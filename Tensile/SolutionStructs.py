@@ -3053,7 +3053,7 @@ class Solution:
 
     # lds max occupancy
     ldsSizeOccupancy = globalParameters["DeviceLDS"] // state["MaxOccupancy"]
-    ldsNumElementsOccupancy = ldsSizeOccupancy // state["ProblemType"]["DataType"].numBytes()
+    ldsNumElementsOccupancy = ldsSizeOccupancy // state["ProblemType"]["DestDataType"].numBytes()
 
     #print("ldsNumElementsA", ldsNumElementsA)
     #print("ldsNumElementsB", ldsNumElementsB)
@@ -3127,7 +3127,7 @@ class Solution:
       ldsNumElements = max(ldsNumElements, ldsNumElementsRemapC)
 
     state["LdsNumElements"] = ldsNumElements
-    ldsSize = ldsNumElements * state["ProblemType"]["DataType"].numBytes()
+    ldsSize = ldsNumElements * state["ProblemType"]["DestDataType"].numBytes()
     if ldsSize > globalParameters["MaxLDS"]:
       reject(state, "Kernel Uses %u > %u bytes of LDS" % ( ldsSize, globalParameters["MaxLDS"]))
       return
