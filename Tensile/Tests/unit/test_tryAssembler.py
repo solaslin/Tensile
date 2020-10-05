@@ -23,9 +23,9 @@ from Tensile.Common import tryAssembler
 
 def test_Simple(useGlobalParameters):
     with useGlobalParameters():
-        assert tryAssembler((9,0,0), "")
+        assert tryAssembler((9,0,0), "v_mov_b32 v0, 0x0")
 # disable for now due to a clang-12 assembler bug
-#       assert not tryAssembler((20,0,0), "")
+#       assert not tryAssembler((20,0,0), "v_mov_b32 v0, 0x0")
 # disable for now due to targetid changes
 
 #def test_Options(useGlobalParameters):
