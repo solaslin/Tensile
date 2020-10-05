@@ -637,7 +637,7 @@ class KernelWriterAssembly(KernelWriter):
 
   @staticmethod
   def getLdsSize(kernel):
-    ldsSize = kernel["LdsNumElements"] * kernel["ProblemType"]["DestDataType"].numBytes()
+    ldsSize = kernel["LdsNumElements"] * kernel["ProblemType"]["DataType"].numBytes()
     return ldsSize
 
   ########################################
@@ -2955,8 +2955,8 @@ class KernelWriterAssembly(KernelWriter):
 
       # set m0
       kStr += inst("s_mov_b32", "m0", hex(kernel["LdsNumElements"] \
-          * self.bpeCexternal), "LDS clamp at %u bytes" \
-          %(kernel["LdsNumElements"] * self.bpeCexternal) )
+          * self.bpeAB), "LDS clamp at %u bytes" \
+          %(kernel["LdsNumElements"] * self.bpeAB) )
 
       # set Serial id vpgr
       kStr += inst("v_mov_b32", vgpr("Serial"), vgpr(0), "thread serial id")
@@ -11954,7 +11954,7 @@ class KernelWriterAssembly(KernelWriter):
     tmp = self.vgprPool.checkOut(1)
     tmpAddr = self.vgprPool.checkOut(1)
     kStr += inst("v_mov_b32", vgpr(tmp), hex(value), "Init value")
-    numBytesPerElement = kernel["ProblemType"]["DestDataType"].numBytes()
+    numBytesPerElement = kernel["ProblemType"]["DataType"].numBytes()
     writesPerThread = ((kernel["LdsNumElements"]*numBytesPerElement-1)//kernel["NumThreads"]//4) + 1
     kStr += inst("v_lshlrev_b32", \
         vgpr(tmpAddr), \
