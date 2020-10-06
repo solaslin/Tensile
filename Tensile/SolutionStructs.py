@@ -1167,10 +1167,15 @@ class ProblemType(collections.abc.Mapping):
     if self["ComplexConjugateB"]:
       name += "C"
 
-    # precision and other
+    # DataTypes
+    # Format A/B/C/D/Alpha/Beta consistent with rocblas
     name += "_"
-    name += self["DataType"].toChar()
-    if self["DataType"] != self["DestDataType"]: name += self["DestDataType"].toChar()
+    name += self["DataType"].toChar()        # Type of A/B
+    name += self["DestDataType"].toChar()    # Type of C/D
+    name += self["ComputeDataType"].toChar() # Type of Alpha/Beta
+
+    # Other
+    name += "_"
     if self["UseBeta"]: name += "B"
     if self["HighPrecisionAccumulate"] and not self["SilentHighPrecisionAccumulate"]: name += "H"
     if self["UseInitialStridesAB"]: name += "I"
