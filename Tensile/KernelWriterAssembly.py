@@ -1086,7 +1086,8 @@ class KernelWriterAssembly(KernelWriter):
       chosen_load_dwordx4 = flat_load_dwordx4
       chosen_load_dwordx2 = flat_load_dwordx2
       chosen_load_dword   = flat_load_dword
-      chosen_load_short    = flat_load_dword # not supported
+      chosen_load_short   = flat_load_dword # not supported
+      chosen_load_byte    = flat_load_dword # not supported
 
     chosen_store_dwordx4 = flat_store_dwordx4
     chosen_store_dwordx2 = flat_store_dwordx2
@@ -3773,11 +3774,15 @@ class KernelWriterAssembly(KernelWriter):
       # use math here to use unsigned (to increase range)
       #  - add srdShiftLeft to tmpSgpr - ensure it is always positive
       #  - below add srdShiftLeft to a tmp copy of the offset used for the compare
-      kStr += inst("s_sub_u32", sgpr(tmpSgpr), sgpr(tmpSgpr), margin, "edge -= margin")
+      # edge = (Size - WG*MT) - margin = the last valid load position that won't cause OOB
+      # offset = the current load position for this thread
+      # so if offset is larger than edge, we go back to the edge position
+      kStr += inst("s_sub_u32", sgpr(tmpSgpr), sgpr(tmpSgpr), margin, "edge -= margin(%u)"%(margin))
       kStr += inst("v_mov_b32", vgpr(edge), sgpr(tmpSgpr), \
-          "edge vgpr = Size%s-%u"%(tP["tileChar"], margin) )
+          "edge vgpr = Size%s- WG*MT - margin(%u)"%(tP["tileChar"], margin) )
       shiftedEdge = self.vgprPool.checkOut(1, "shiftedEdge", self.preventVgprOverflowDuringNewTile)
-      kStr += inst("_v_add_co_u32", vgpr(shiftedEdge), "vcc", vgpr(edge), self.srdShiftLeft[tc], "add srdShiftLift")
+      kStr += inst("_v_add_co_u32", vgpr(shiftedEdge), "vcc", vgpr(edge), self.srdShiftLeft[tc], \
+        "shiftedEdge = edge + srdShiftLeft(%u)"%(self.srdShiftLeft[tc]))
     else:
       tmpSgpr = self.getTmpSgpr(1).idx()
       kStr += inst("s_sub_u32", sgpr(tmpSgpr), self.sizeRef(tP["idx"]), margin, \
@@ -3796,16 +3801,20 @@ class KernelWriterAssembly(KernelWriter):
     tmpSgpr = self.getTmpSgpr(2).idx()
     for l in range(0, tP["nrt"]):
       # compare
+      cmpCommentText = "offset < edge"
       if self.groOffsetInMacroTile:
         shiftedOffset = self.vgprPool.checkOut(1, "shiftedOffset", self.preventVgprOverflowDuringNewTile)
-        kStr += inst("_v_add_co_u32", vgpr(shiftedOffset), "vcc", vgpr(v+l), self.srdShiftLeft[tc], "")
+        kStr += inst("_v_add_co_u32", vgpr(shiftedOffset), "vcc", vgpr(v+l), self.srdShiftLeft[tc], \
+          "shiftedOffset = offset + srdShiftLeft(%u)"%(self.srdShiftLeft[tc]))
         # int cmp since if we are near the front of the tile this may go negative:
-        kStr += inst("v_cmp_lt_u32", sgpr(tmpSgpr,2), vgpr(shiftedOffset), vgpr(shiftedEdge), "offset < edge" )
+        cmpCommentText = "shiftedOffset < shiftedEdge"
+        kStr += inst("v_cmp_lt_u32", sgpr(tmpSgpr,2), vgpr(shiftedOffset), vgpr(shiftedEdge), cmpCommentText )
         self.vgprPool.checkIn(shiftedOffset)
       else:
-        kStr += inst("v_cmp_lt_u32", sgpr(tmpSgpr,2), vgpr(v+l), vgpr(edge), "offset < edge" )
+        kStr += inst("v_cmp_lt_u32", sgpr(tmpSgpr,2), vgpr(v+l), vgpr(edge), cmpCommentText )
       # shift
-      kStr += inst("v_cndmask_b32", vgpr(v+l), vgpr(edge), vgpr(v+l), sgpr(tmpSgpr,2), "offset = (offset < edge) ? offset : edge" )
+      kStr += inst("v_cndmask_b32", vgpr(v+l), vgpr(edge), vgpr(v+l), sgpr(tmpSgpr,2), \
+        "offset = (%s) ? offset(v%u) : edge(v%u)"%(cmpCommentText, v+l, edge) )
     self.vgprPool.checkIn(edge)
     if self.groOffsetInMacroTile:
       self.vgprPool.checkIn(shiftedEdge)
@@ -7281,10 +7290,13 @@ class KernelWriterAssembly(KernelWriter):
   # Local Write: Do It A/B
   ##############################################################################
   def localWriteDo(self, kernel, tP):
-    if not self.do["LocalWrite"]: return ""
+    if not self.do["LocalWrite"]: return "", -1
+
     tc = tP["tensorChar"]
     self.localWriteDoCnt += 1
     imod = Code.Module()
+    tmpVgprStartIdxForLSHR = -1
+
     if not kernel["DirectToLds%s"%tc]:
       instruction = tP["localWriteInstruction"]
       numBlocks = instruction.numBlocks
@@ -7421,8 +7433,6 @@ class KernelWriterAssembly(KernelWriter):
             loopCnt+=1
       if tmpLocalWriteAddr != -1:
         self.vgprPool.checkIn(tmpLocalWriteAddr)
-      if tmpVgprStartIdxForLSHR != -1:
-        self.vgprPool.checkIn(tmpVgprStartIdxForLSHR)
 
     # localWriteDoCnt<=2 is prefetch if PrefetchGlobalRead:
     if 0 and tP["isB"]: # post-lds-write
@@ -7490,7 +7500,7 @@ class KernelWriterAssembly(KernelWriter):
         self.tPA["localReadInstruction"] = self.localReadInstructionA
         self.tPB["localReadInstruction"] = self.localReadInstructionB
 
-    return imod
+    return imod, tmpVgprStartIdxForLSHR
 
   ##############################################################################
   # Local Read: Swap Offsets A/B
@@ -8207,7 +8217,7 @@ class KernelWriterAssembly(KernelWriter):
     svoLabels = []
 
     for i in range(0, glvw):
-      r = (i+1) % glvw
+      r = (i+1) % glvw  # r = [1,2,3,...,glvw-1, 0], the last one svrLabels[glvw-1] stores for r=0 -> no shift
       label = self.getLabelNum("ShiftVectorComponents%u_R%u" % (tP["idx"], r) )
       svrLabels.append(label)
       tmpLabels = []
@@ -8273,18 +8283,18 @@ class KernelWriterAssembly(KernelWriter):
     kStr += vectorStaticRemainder(dummy, tReg, tReg, numOutputThreads0, tmpVgpr, tmpSgpr)
 
     # rReg : reminder of M_size % vectorwidth
-    # decide to jump to block which handle this case, M_szie % vector width
+    # decide to jump to block which handle this case, M_size % vector width
     rReg = self.vgprPool.checkOut(1)
     kStr += vectorStaticRemainder(dummy, rReg, wgMT, glvw, tmpVgpr, tmpSgpr)
     for r in range(1, glvw):
       kStr += inst("v_cmp_eq_u32", "vcc", vgpr(rReg), hex(r), "wgMT%%VW == %u"%r )
-      kStr += inst("s_cbranch_vccnz label_%04u" % svrLabels[(r-1)], "shift d%u r=%u"%(tP["idx"], r))
+      kStr += inst("s_cbranch_vccnz label_%04u" % svrLabels[(r-1)], "branch to shift d%u r=%u"%(tP["idx"], r))
     kStr += inst("s_branch label_%04u"%svrLabels[glvw-1], "no shifting" )
     self.vgprPool.checkIn(rReg)
 
     _, arch2acc = self.AccToArchMapper(kernel)
 
-    # blocks for handle M_szie % vector width
+    # blocks for handle M_size % vector width
     for r in range(1, glvw):
       kStr += self.comment3("shift d%u r=%u"%(tP["idx"], r))
       kStr += "label_%04u:%s" % (svrLabels[r-1], self.endLine)
@@ -8296,7 +8306,7 @@ class KernelWriterAssembly(KernelWriter):
           packIdx = wt * numSubOutputGroupsPerWave0 + ot
           grpVal  = wt * numSubOutputGroupsPerWave0 * kernel["MIWaveGroup"][0] + ot
           kStr += inst("v_cmp_eq_u32", "vcc", vgpr(gReg), hex(grpVal), "wgMT/8 == %u" % packIdx )
-          kStr += inst("s_cbranch_vccnz label_%04u" % sviLabels[(r-1)][packIdx], "shift d%u, r=%u, v=%u" % (tP["idx"], r, packIdx))
+          kStr += inst("s_cbranch_vccnz label_%04u" % sviLabels[(r-1)][packIdx], "branch to shift d%u, r=%u, v=%u" % (tP["idx"], r, packIdx))
 
       for wt in range(0, kernel["MIWaveTile"][0]):
         # blocks for handle sub group id for numSubOutputGroupsPerWave0
@@ -8312,7 +8322,7 @@ class KernelWriterAssembly(KernelWriter):
           # for vector widht 2 with continuous 4, we have 1, 3 case to handle
           for outIdx in range(0, numShiftBlock):
             kStr += inst("v_cmp_eq_u32", "vcc", vgpr(eReg), hex(outIdx*glvw+r), "wgMT %% 4 == %u" % (outIdx*2+1) )
-            kStr += inst("s_cbranch_vccnz label_%04u" % svoLabels[(r-1)][packIdx][outIdx], "shift d%u, r=%u, v=%u, o=%u" % (tP["idx"], r, packIdx, outIdx))
+            kStr += inst("s_cbranch_vccnz label_%04u" % svoLabels[(r-1)][packIdx][outIdx], "branch to shift d%u, r=%u, v=%u, o=%u" % (tP["idx"], r, packIdx, outIdx))
 
           # blocks to handle shfiting
           for outIdx in range(0, numShiftBlock):
