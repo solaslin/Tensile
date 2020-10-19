@@ -26,11 +26,10 @@ def test_Simple(useGlobalParameters):
         assert tryAssembler((9,0,0), "")
 # disable for now due to a clang-12 assembler bug
 #       assert not tryAssembler((20,0,0), "")
-# disable for now due to targetid changes
 
-#def test_Options(useGlobalParameters):
-#    with useGlobalParameters():
-#        assert tryAssembler((9,0,6), "", False, "-mllvm --amdhsa-code-object-version=2")
+def test_Options(useGlobalParameters):
+    with useGlobalParameters():
+        assert tryAssembler((9,0,6), "", False, "-mno-code-object-v3")
 
 def test_Macro(useGlobalParameters):
     """
@@ -54,7 +53,6 @@ def test_Macro(useGlobalParameters):
 
             """
 
-# disable for now due to targetid changes
-#        assert tryAssembler((10,1,0), thekernel.format(arch="gfx1010"), True, '-mllvm --amdhsa-code-object-version=4')
+        assert tryAssembler((10,1,0), thekernel.format(arch="gfx1010"), True, '-mcode-object-v3')
         assert tryAssembler((10,1,1), thekernel.format(arch="gfx1011"))
         assert not tryAssembler((8,0,3), thekernel.format(arch="gfx803"))

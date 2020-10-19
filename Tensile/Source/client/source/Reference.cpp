@@ -113,11 +113,6 @@ namespace Tensile
             }
         }
 
-        void throwException(const std::string& msg)
-        {
-            throw std::runtime_error(msg.c_str());
-        }
-
         template <typename Inputs, typename Accumulator>
         void ReferenceSolution<Inputs, Accumulator>::SolveCPU(ContractionProblem const& problem,
                                                               Inputs const&             inputs,
@@ -204,10 +199,7 @@ namespace Tensile
                         std::string matrixID = inputs.a == nullptr ? "A" : "B";
                         std::string msg      = std::string("Unsupported nullptr for ") + matrixID
                                           + std::string(" when Alpha !=0\n");
-                        // HACK moving throw temporarily to test targetid update
-                        //      throw is currently causing a compiler error in this function
-                        throwException(msg);
-                        // throw std::runtime_error(msg.c_str());
+                        throw std::runtime_error(msg.c_str());
                     }
 
                     for(size_t boundNum = 0; boundNum < boundCount; boundNum++)
