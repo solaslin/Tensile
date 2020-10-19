@@ -162,14 +162,15 @@ BenchmarkProblems:
 #       InitialSolutionParameters:
 #       BenchmarkCommonParameters:
 #         - KernelLanguage: ["Assembly"]
+#         - LoopTail: [True]
+#         - PrefetchGlobalRead: [True]
+#         - PrefetchLocalRead: [True]
+#         - OptNoLoadLoop: [True]
+#         - ExpandPointerSwap: [True]
+#         - EdgeType: ["ShiftPtr"]
+#         # - ScheduleGlobalRead: [True] # default
+#         # - ScheduleLocalWrite: [True] # default
 #       ForkParameters:
-#         - LoopTail: [True]           # priority 1 (Done)
-#         - PrefetchGlobalRead: [True] # priority 2 (Done)
-#         - OptNoLoadLoop: [True]      # priority 3 (Done)
-#         - ExpandPointerSwap: [True]  # priority 4 (Done)
-#         - EdgeType: ["ShiftPtr"]     # priority 5 (Done)
-#         - ScheduleGlobalRead: [True] # priority 6
-#         - PrefetchLocalRead: [True]  # priority 7
 #         - MatrixInstruction:
 #           - [ 4, 4, 4,16, 2, 1,1, 1,1]  # 8x32
 #           - [ 4, 4, 4,16, 2, 1,1, 2,2]  # 16x64
@@ -201,6 +202,13 @@ BenchmarkProblems:
 #           - [ 16, 16, 1 ]
 #         - DepthU: [ 16,32,64 ]
 #         # - VectorWidth: [4]
+#         - WaveSeparateGlobalReadA: [1] # priority 1
+#         - WaveSeparateGlobalReadB: [1]
+#         # - TransposeLDS: [True]         # priority 2
+#         # - StoreRemapVectorWidth: [4]   # priority 3
+#         # - ScheduleIterAlg: [3]         # priority 4
+#         # - DirectToLds: [True]          # TBD
+#         # - InnerUnroll: [2]             # TBD
 #       BenchmarkForkParameters:
 #       BenchmarkJoinParameters:
 #       BenchmarkFinalParameters:
@@ -238,14 +246,15 @@ BenchmarkProblems:
 #       InitialSolutionParameters:
 #       BenchmarkCommonParameters:
 #         - KernelLanguage: ["Assembly"]
+#         - LoopTail: [True]
+#         - PrefetchGlobalRead: [True]
+#         - PrefetchLocalRead: [True]
+#         - OptNoLoadLoop: [True]
+#         - ExpandPointerSwap: [True]
+#         - EdgeType: ["ShiftPtr"]
+#         # - ScheduleGlobalRead: [True] # default
+#         # - ScheduleLocalWrite: [True] # default
 #       ForkParameters:
-#         - LoopTail: [True]           # priority 1 (Done)
-#         - PrefetchGlobalRead: [True] # priority 2 (Done)
-#         - OptNoLoadLoop: [True]      # priority 3 (Done)
-#         - ExpandPointerSwap: [True]  # priority 4 (Done)
-#         - EdgeType: ["ShiftPtr"]     # priority 5 (Done)
-#         - ScheduleGlobalRead: [True] # priority 6
-#         - PrefetchLocalRead: [True]  # priority 7
 #         - MatrixInstruction:
 #           - [ 4, 4, 4,16, 2, 1,1, 1,1]  # 8x32
 #           - [ 4, 4, 4,16, 2, 1,1, 2,2]  # 16x64
@@ -277,6 +286,13 @@ BenchmarkProblems:
 #           - [ 16, 16, 1 ]
 #         - DepthU: [ 16,32,64 ]
 #         # - VectorWidth: [4]
+#         - WaveSeparateGlobalReadA: [1] # priority 1
+#         - WaveSeparateGlobalReadB: [1]
+#         # - TransposeLDS: [True]         # priority 2
+#         # - StoreRemapVectorWidth: [4]   # priority 3
+#         # - ScheduleIterAlg: [3]         # priority 4
+#         # - DirectToLds: [True]          # TBD
+#         # - InnerUnroll: [2]             # TBD
 #       BenchmarkForkParameters:
 #       BenchmarkJoinParameters:
 #       BenchmarkFinalParameters:
@@ -314,14 +330,15 @@ BenchmarkProblems:
 #       InitialSolutionParameters:
 #       BenchmarkCommonParameters:
 #         - KernelLanguage: ["Assembly"]
+#         - LoopTail: [True]
+#         - PrefetchGlobalRead: [True]
+#         - PrefetchLocalRead: [True]
+#         - OptNoLoadLoop: [True]
+#         - ExpandPointerSwap: [True]
+#         - EdgeType: ["ShiftPtr"]
+#         # - ScheduleGlobalRead: [True] # default
+#         # - ScheduleLocalWrite: [True] # default
 #       ForkParameters:
-#         - LoopTail: [True]           # priority 1 (Done)
-#         - PrefetchGlobalRead: [True] # priority 2 (Done)
-#         - OptNoLoadLoop: [True]      # priority 3 (Done)
-#         - ExpandPointerSwap: [True]  # priority 4 (Done)
-#         - EdgeType: ["ShiftPtr"]     # priority 5 (Done)
-#         - ScheduleGlobalRead: [True] # priority 6
-#         - PrefetchLocalRead: [True]  # priority 7
 #         - MatrixInstruction:
 #           - [ 4, 4, 4,16, 2, 1,1, 1,1]  # 8x32
 #           - [ 4, 4, 4,16, 2, 1,1, 2,2]  # 16x64
@@ -353,6 +370,13 @@ BenchmarkProblems:
 #           - [ 16, 16, 1 ]
 #         - DepthU: [ 16,32,64 ]
 #         # - VectorWidth: [4]
+#         - WaveSeparateGlobalReadA: [1] # priority 1
+#         - WaveSeparateGlobalReadB: [1]
+#         # - TransposeLDS: [True]         # priority 2
+#         # - StoreRemapVectorWidth: [4]   # priority 3
+#         # - ScheduleIterAlg: [3]         # priority 4
+#         # - DirectToLds: [True]          # TBD
+#         # - InnerUnroll: [2]             # TBD
 #       BenchmarkForkParameters:
 #       BenchmarkJoinParameters:
 #       BenchmarkFinalParameters:
@@ -390,14 +414,15 @@ BenchmarkProblems:
 #       InitialSolutionParameters:
 #       BenchmarkCommonParameters:
 #         - KernelLanguage: ["Assembly"]
+#         - LoopTail: [True]
+#         - PrefetchGlobalRead: [True]
+#         - PrefetchLocalRead: [True]
+#         - OptNoLoadLoop: [True]
+#         - ExpandPointerSwap: [True]
+#         - EdgeType: ["ShiftPtr"]
+#         # - ScheduleGlobalRead: [True] # default
+#         # - ScheduleLocalWrite: [True] # default
 #       ForkParameters:
-#         - LoopTail: [True]           # priority 1 (Done)
-#         - PrefetchGlobalRead: [True] # priority 2 (Done)
-#         - OptNoLoadLoop: [True]      # priority 3 (Done)
-#         - ExpandPointerSwap: [True]  # priority 4 (Done)
-#         - EdgeType: ["ShiftPtr"]     # priority 5 (Done)
-#         - ScheduleGlobalRead: [True] # priority 6
-#         - PrefetchLocalRead: [True]  # priority 7
 #         - MatrixInstruction:
 #           - [ 4, 4, 4,16, 2, 1,1, 1,1]  # 8x32
 #           - [ 4, 4, 4,16, 2, 1,1, 2,2]  # 16x64
@@ -429,6 +454,13 @@ BenchmarkProblems:
 #           - [ 16, 16, 1 ]
 #         - DepthU: [ 16,32,64 ]
 #         # - VectorWidth: [4]
+#         - WaveSeparateGlobalReadA: [1] # priority 1
+#         - WaveSeparateGlobalReadB: [1]
+#         # - TransposeLDS: [True]         # priority 2
+#         # - StoreRemapVectorWidth: [4]   # priority 3
+#         # - ScheduleIterAlg: [3]         # priority 4
+#         # - DirectToLds: [True]          # TBD
+#         # - InnerUnroll: [2]             # TBD
 #       BenchmarkForkParameters:
 #       BenchmarkJoinParameters:
 #       BenchmarkFinalParameters:
