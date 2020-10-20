@@ -506,6 +506,16 @@ def problemSizeParams(problemType, problem):
     else:
       dstrides = [-1] * problemType.dDims
 
+    if problem.stridesC:
+      cstrides = list(problem.stridesC)
+    else:
+      cstrides = [-1] * problemType.cDims
+
+    if problem.stridesD:
+      dstrides = list(problem.stridesD)
+    else:
+      dstrides = [-1] * problemType.dDims
+
     if len(problem.sizes) == numIndices:
         None
     elif len(problem.sizes) == numIndices + 4:
