@@ -1,5 +1,5 @@
 GlobalParameters:
-  NumElementsToValidate: 0
+  NumElementsToValidate: 65535
   KernelTime: True
   DataInitTypeAlpha: 1
   DataInitTypeBeta: 0
@@ -14,8 +14,8 @@ BenchmarkProblems:
     - # ProblemType
       OperationType: GEMM
       DataType: h
-      # DestDataType: B
-      # ComputeDataType: s
+      DestDataType: s
+      ComputeDataType: s
       HighPrecisionAccumulate: True
       TransposeA: False
       TransposeB: True

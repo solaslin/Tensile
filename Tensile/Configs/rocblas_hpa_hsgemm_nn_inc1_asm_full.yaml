@@ -1,5 +1,5 @@
 GlobalParameters:
-  NumElementsToValidate: 65535
+  NumElementsToValidate: 0
   KernelTime: True
   DataInitTypeAlpha: 1
   DataInitTypeBeta: 0
@@ -626,12 +626,12 @@ BenchmarkProblems:
           - Exact: [ 1024, 10240, 1, 2048, 1024, 1024, 1024, 2048 ] #gemm
           - Exact: [ 1024, 10120, 1, 1024, 1024, 1024, 1024, 1024 ] #gemm
           - Exact: [ 1024, 10192, 1, 2048, 1024, 1024, 1024, 2048 ] #gemm
-          # Too big - Exact: { sizes: [ 64, 24, 6816, 24 ], stridesA: [ -1, 1308672, 192 ], stridesB: [ -1, 24, 576 ], stridesC: [ -1, 436224, 64 ], stridesD: [ -1, 436224, 64 ] } # gemm_strided_batched
-          # Too big - Exact: { sizes: [ 64, 24, 6816, 24 ], stridesA: [ -1, 1308672, 192 ], stridesB: [ -1, 24, 576 ], stridesC: [ -1, 1308672, 192 ], stridesD: [ -1, 1308672, 192 ] } # gemm_strided_batched
+          - Exact: { sizes: [ 64, 24, 6816, 24 ], stridesA: [ -1, 1308672, 192 ], stridesB: [ -1, 24, 576 ], stridesC: [ -1, 436224, 64 ], stridesD: [ -1, 436224, 64 ] } # gemm_strided_batched
+          - Exact: { sizes: [ 64, 24, 6816, 24 ], stridesA: [ -1, 1308672, 192 ], stridesB: [ -1, 24, 576 ], stridesC: [ -1, 1308672, 192 ], stridesD: [ -1, 1308672, 192 ] } # gemm_strided_batched
           - Exact: [ 1024, 10152, 1, 1024, 1024, 1024, 1024, 1024 ] #gemm
           - Exact: [ 1024, 10080, 1, 3072, 1024, 1024, 1024, 3072 ] #gemm
-          # Too big - Exact: { sizes: [ 64, 26, 6272, 26 ], stridesA: [ -1, 1204224, 192 ], stridesB: [ -1, 26, 676 ], stridesC: [ -1, 1204224, 192 ], stridesD: [ -1, 1204224, 192 ] } # gemm_strided_batched
-          # Too big - Exact: { sizes: [ 64, 26, 6272, 26 ], stridesA: [ -1, 1204224, 192 ], stridesB: [ -1, 26, 676 ], stridesC: [ -1, 401408, 64 ], stridesD: [ -1, 401408, 64 ] } # gemm_strided_batched
+          - Exact: { sizes: [ 64, 26, 6272, 26 ], stridesA: [ -1, 1204224, 192 ], stridesB: [ -1, 26, 676 ], stridesC: [ -1, 1204224, 192 ], stridesD: [ -1, 1204224, 192 ] } # gemm_strided_batched
+          - Exact: { sizes: [ 64, 26, 6272, 26 ], stridesA: [ -1, 1204224, 192 ], stridesB: [ -1, 26, 676 ], stridesC: [ -1, 401408, 64 ], stridesD: [ -1, 401408, 64 ] } # gemm_strided_batched
           - Exact: [ 100352, 512, 1, 256, 100352, 100352, 100352, 256 ] #gemm
           - Exact: [ 12544, 2048, 1, 1024, 12544, 12544, 12544, 1024 ] #gemm
           - Exact: [ 12544, 64, 1, 147, 12544, 12544, 12544, 147 ] #gemm
