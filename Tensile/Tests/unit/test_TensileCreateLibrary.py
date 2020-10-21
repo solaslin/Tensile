@@ -88,9 +88,9 @@ def test_loadSolutions(caplog):
     solutionWriter, _, kernelWriterAssembly, \
         _, _ = TensileCreateLibrary.getSolutionAndKernelWriters(solutions, kernels)
 
-    expectedSolutionName0 = "Cijk_Ailk_Bljk_SB_MT128x128x2_SE_TT8_8_WG16_16_1"
-    expectedSolutionName1 = "Cijk_Ailk_Bljk_SB_MT64x64x2_SE_TT4_4_WG16_16_1"
-    expectedSolutionName2 = "Cijk_Ailk_Bljk_SB_MT64x64x2_SE_TT4_8_WG16_8_1"
+    expectedSolutionName0 = "Cijk_Ailk_Bljk_SSS_B_MT128x128x2_SE_TT8_8_WG16_16_1"
+    expectedSolutionName1 = "Cijk_Ailk_Bljk_SSS_B_MT64x64x2_SE_TT4_4_WG16_16_1"
+    expectedSolutionName2 = "Cijk_Ailk_Bljk_SSS_B_MT64x64x2_SE_TT4_8_WG16_8_1"
 
     actualSolutionName0 = solutionWriter.getSolutionName(solutions[0])
     actualSolutionName1 = solutionWriter.getSolutionName(solutions[1])
@@ -100,9 +100,9 @@ def test_loadSolutions(caplog):
     assert expectedSolutionName1 == actualSolutionName1
     assert expectedSolutionName2 == actualSolutionName2
 
-    expectedKernelName0 = "Cijk_Ailk_Bljk_SB_MT128x128x2_SE_K1_TT8_8_WG16_16_1"
-    expectedKernelName1 = "Cijk_Ailk_Bljk_SB_MT64x64x2_SE_K1_TT4_4_WG16_16_1"
-    expectedKernelName2 = "Cijk_Ailk_Bljk_SB_MT64x64x2_SE_K1_TT4_8_WG16_8_1"
+    expectedKernelName0 = "Cijk_Ailk_Bljk_SSS_B_MT128x128x2_SE_K1_TT8_8_WG16_16_1"
+    expectedKernelName1 = "Cijk_Ailk_Bljk_SSS_B_MT64x64x2_SE_K1_TT4_4_WG16_16_1"
+    expectedKernelName2 = "Cijk_Ailk_Bljk_SSS_B_MT64x64x2_SE_K1_TT4_8_WG16_8_1"
 
     actualKernelName0 = kernelWriterAssembly.getKernelName(kernels[0])
     actualKernelName1 = kernelWriterAssembly.getKernelName(kernels[1])
