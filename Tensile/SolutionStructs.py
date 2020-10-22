@@ -942,9 +942,9 @@ class ProblemType(collections.abc.Mapping):
     if inType.isHalf():
       # TODO- Test and migrate ([H/H/H]+HPA) to ([H/H/S]+HPA)
       # Note that we need to do a little change in rocBLAS and logic yaml
-      if not ((outType.isHalf() or outType.isSingle()) and \
-              (computeType.isHalf() or computeType.isSingle())):
-        printExit("DataType=H only allows DestDataType=H/S and ComputeDataType=H/S")
+      if not ((outType.isHalf() and (computeType.isHalf() or computeType.isSingle())) or \
+              (outType.isSingle() and computeType.isSingle())):
+        printExit("DataType=H only allows (DestDataType=H and ComputeDataType=H/S) or (DestDataType=S and ComputeDataType=S")
       # if not (outType.isHalf() and computeType.isHalf()):
       #   printExit("DataType=H only allows DestDataType=H and ComputeDataType=H")
 
