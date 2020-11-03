@@ -3915,7 +3915,6 @@ class KernelWriterAssembly(KernelWriter):
                           "zp.freeDim * strideFree + zp.sumDim * strideSum PadStart")
 
               if kernel["BufferLoad"] and kernel["FractionalLoad"]:
-                tmpSgpr = self.getTmpSgpr(1).idx()
                 lastValidThread = kernel[tP["lsc"]]*kernel[tP["lsp"]]//tP["glvw"]
                 if lastValidThread < kernel["NumThreads"]:
                   kStr += "// Offset only valid for %u/%u threads inside the PerLoadTile\n" \
@@ -11466,8 +11465,7 @@ class KernelWriterAssembly(KernelWriter):
       kStr += self.comment("apply mask, calc new C and issue writes")
       #kStr += self.bomb() # can see store addresses just before the store inst
 
-      if kernel["ProblemType"]["DataType"].isBFloat16() and kernel["ProblemType"]["HighPrecisionAccumulate"] \
-         and kernel["ProblemType"]["DestDataType"].isBFloat16():
+      if kernel["ProblemType"]["DestDataType"].isBFloat16() and kernel["ProblemType"]["HighPrecisionAccumulate"]:
         vgprBf16Temp = self.vgprPool.checkOut(4)
         vgprBf16Mask = vgprBf16Temp + 1
         vgprFp32Nan = vgprBf16Temp + 2
@@ -11597,18 +11595,17 @@ class KernelWriterAssembly(KernelWriter):
               kStr += "v_fma_f64 %s, %s, %s, %s%s" % (vgpr("ValuC+%u"%(sumIdxV*4+2),2), vgpr(dataV+2,2), sgpr("Beta+0",2), vgpr("ValuC+%u"%(sumIdxV*4+2),2), self.endLine)
 
         # pack stores, beta and non-beta reach here:
-        for vi in range(0, gwvw):
-          sumIdxV = ss.elementSumIdx[elementIdx] + vi
-          if kernel["ProblemType"]["DataType"].isHalf():
-            if kernel["ProblemType"]["HighPrecisionAccumulate"] and kernel["ProblemType"]["DestDataType"].isHalf():
+        if kernel["ProblemType"]["HighPrecisionAccumulate"] and (kernel["_GlobalAccumulation"] != 'MultipleBuffer'):
+          for vi in range(0, gwvw):
+            sumIdxV = ss.elementSumIdx[elementIdx] + vi
+            if kernel["ProblemType"]["DestDataType"].isHalf():
               kStr += inst("v_cvt_f16_f32", vgpr("ValuC+%u"%sumIdxV), vgpr("ValuC+%u"%sumIdxV), "convert C to fp16" )
               if vi%2 == 1:
                 assert (gwvw % 2 == 0)
                 d = ss.elementSumIdx[elementIdx] + vi//2
                 kStr += inst("v_pack_b32_f16", vgpr(d), vgpr("ValuC+%u"%(sumIdxV-1)), vgpr("ValuC+%u"%sumIdxV), "Pack with neighbor" )
 
-          elif kernel["ProblemType"]["DataType"].isBFloat16():
-            if kernel["ProblemType"]["HighPrecisionAccumulate"] and kernel["ProblemType"]["DestDataType"].isBFloat16():
+            elif kernel["ProblemType"]["DestDataType"].isBFloat16():
               kStr += inst("v_cmp_u_f32", sgpr(tmpS01,2), vgpr("ValuC+%u"%sumIdxV), vgpr("ValuC+%u"%sumIdxV), "check Nan" )
               kStr += inst("v_bfe_u32", vgpr(vgprBf16Temp), vgpr("ValuC+%u"%sumIdxV), "16", "1", "Non-Nan case: store lsb of bf16" )
               kStr += inst("v_add3_u32", vgpr(vgprBf16Temp), vgpr("ValuC+%u"%sumIdxV), vgpr(vgprBf16Temp), vgpr(vgprBf16Inc), "Non-Nan case: add lsb and the increment for rounding" )
@@ -11629,8 +11626,7 @@ class KernelWriterAssembly(KernelWriter):
           # Column Block Shape has been written to LDS
           # Now read back and write out to global memory
 
-      if kernel["ProblemType"]["DataType"].isBFloat16() and kernel["ProblemType"]["HighPrecisionAccumulate"] and \
-         kernel["ProblemType"]["DestDataType"].isBFloat16():
+      if kernel["ProblemType"]["DestDataType"].isBFloat16() and kernel["ProblemType"]["HighPrecisionAccumulate"]:
         self.vgprPool.checkIn(vgprBf16Temp)
 
           #kStr += self.bomb(5)
