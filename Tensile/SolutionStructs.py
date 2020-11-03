@@ -1170,14 +1170,19 @@ class ProblemType(collections.abc.Mapping):
       name += "C"
 
     # DataTypes
-    # Format A/B/C/D/Alpha/Beta consistent with rocblas
     name += "_"
-    name += self["DataType"].toChar()        # Type of A/B
-    name += self["DestDataType"].toChar()    # Type of C/D
-    name += self["ComputeDataType"].toChar() # Type of Alpha/Beta
+    name += self["DataType"].toChar() # Type of A/B
+
+    # Special condition for HSS and BSS kernels, distinguish types due to Ti != To.
+    # _TiToTc_
+    # TODO: Distinguish all kernels by _TiToTc_ to be more consistent with rocblas
+    if (self["DataType"].isBFloat16() or self["DataType"].isHalf()) and \
+       (self["DestDataType"].isSingle() and self["ComputeDataType"].isSingle()):
+      name += self["DestDataType"].toChar()    # Type of C/D
+      name += self["ComputeDataType"].toChar() # Type of Alpha/Beta
+      name += "_"
 
     # Other
-    name += "_"
     if self["UseBeta"]: name += "B"
     if self["HighPrecisionAccumulate"] and not self["SilentHighPrecisionAccumulate"]: name += "H"
     if self["UseInitialStridesAB"]: name += "I"
